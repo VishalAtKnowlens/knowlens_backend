@@ -236,8 +236,9 @@ export class AuthService {
   static async refreshToken(refreshToken, language = 'en', deviceInfo = null, ipAddress = null) {
     try {
       // Verify refresh token
+      console.log('Verifying refresh token:', refreshToken)
       const decoded = verifyRefreshToken(refreshToken)
-      
+      console.log('Decoded refresh token:', decoded)
       // Find refresh token in database
       const storedToken = await prisma.refreshToken.findUnique({
         where: { token: refreshToken },

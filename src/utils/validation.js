@@ -43,6 +43,29 @@ export const changePasswordSchema = z.object({
   newPassword: passwordSchema
 })
 
+// User management schemas
+export const userSchema = z.object({
+  email: emailSchema,
+  password: passwordSchema,
+  firstName: z.string().min(1, 'First name is required').max(100, 'First name too long'),
+  lastName: z.string().min(1, 'Last name is required').max(100, 'Last name too long'),
+  organisationId: z.string().min(1, 'Organization ID is required'),
+  language: languageSchema.optional(),
+  employeeId: z.string().max(50, 'Employee ID too long').optional(),
+  roleIds: z.array(z.string()).optional()
+})
+
+export const adminUpdateUserSchema = z.object({
+  email: emailSchema.optional(),
+  password: passwordSchema.optional(),
+  firstName: z.string().min(1, 'First name is required').max(100, 'First name too long').optional(),
+  lastName: z.string().min(1, 'Last name is required').max(100, 'Last name too long').optional(),
+  language: languageSchema.optional(),
+  employeeId: z.string().max(50, 'Employee ID too long').optional(),
+  isActive: z.boolean().optional(),
+  roleIds: z.array(z.string()).optional()
+})
+
 // Organization schemas
 export const createOrganisationSchema = z.object({
   name: z.string().min(1, 'Organization name is required').max(200, 'Organization name too long'),
@@ -167,6 +190,26 @@ export function createFastifySchema(zodSchema) {
           }
         }
       }
+    }
+  }
+}
+
+/**
+ * Fastify preHandler to validate request body with Zod schema
+ * @param {Object} schema - Zod schema
+ * @returns {Function} Fastify preHandler
+ */
+export function validateRequest(schema) {
+  return async (request, reply) => {
+    try {
+      request.body = validateSchema(schema, request.body)
+    } catch (error) {
+      return reply.code(error.statusCode || 400).send({
+        statusCode: error.statusCode || 400,
+        error: 'Bad Request',
+        message: 'Validation failed',
+        details: error.details || [{ field: 'body', message: error.message }]
+      })
     }
   }
 }

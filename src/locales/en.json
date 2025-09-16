@@ -44,9 +44,11 @@
     "user_created": "User created successfully",
     "user_updated": "User updated successfully",
     "user_deleted": "User deleted successfully",
+    "user_permanently_deleted": "User permanently deleted",
     "user_not_found": "User not found",
     "users_retrieved": "Users retrieved successfully",
-    "insufficient_permissions": "Insufficient permissions"
+    "insufficient_permissions": "Insufficient permissions",
+    "invalid_roles": "One or more invalid roles provided"
   },
   "organization": {
     "settings_updated": "Organization settings updated successfully",

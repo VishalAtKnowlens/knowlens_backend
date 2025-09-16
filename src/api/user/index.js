@@ -1,8 +1,9 @@
 import { prisma } from '../../config/database.js'
-import { validateSchema, updateUserProfileSchema } from '../../utils/validation.js'
+import { validateSchema, updateUserProfileSchema, userSchema, adminUpdateUserSchema, validateRequest } from '../../utils/validation.js'
 import { authenticate, enforceOrganizationScope } from '../../middleware/auth.js'
 import { detectLanguage } from '../../middleware/language.js'
 import { createLocalizedSuccess, createLocalizedError } from '../../config/i18n.js'
+import { UserService } from '../../services/user.js'
 
 /**
  * User routes plugin
@@ -412,4 +413,312 @@ export default async function userRoutes(fastify) {
       throw createLocalizedError('error.internal_server_error', request.language, 500)
     }
   })
+
+  // ===========================
+  // User Management CRUD APIs
+  // ===========================
+
+  /**
+   * POST /api/user
+   * Create a new user (Admin only)
+   */
+  fastify.post('/', {
+    preHandler: [validateRequest(userSchema)],
+    schema: {
+      description: 'Create a new user',
+      tags: ['User Management'],
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        required: ['email', 'password', 'firstName', 'lastName', 'organisationId'],
+        properties: {
+          email: { type: 'string', format: 'email' },
+          password: { type: 'string', minLength: 8 },
+          firstName: { type: 'string', minLength: 1, maxLength: 100 },
+          lastName: { type: 'string', minLength: 1, maxLength: 100 },
+          organisationId: { type: 'string', minLength: 1 },
+          language: { type: 'string', enum: ['en', 'es', 'fr'] },
+          employeeId: { type: 'string', maxLength: 50 },
+          roleIds: { type: 'array', items: { type: 'string' } }
+        }
+      },
+      response: {
+        201: {
+          type: 'object',
+          additionalProperties: true,
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' },
+            data: {
+              type: 'object',
+              additionalProperties: true,
+              properties: {
+                user: { 
+                  type: 'object',
+                  additionalProperties: true
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      console.log("👤 Creating new user...")
+      const user = await UserService.create(request.body, request.language)
+      reply.code(201).send(user)
+    } catch (error) {
+      console.error("❌ Create user error:", error)
+      if (error.statusCode) {
+        throw error
+      }
+      reply.code(400).send({ 
+        statusCode: 400,
+        error: 'Bad Request',
+        message: error.message 
+      })
+    }
+  })
+
+  /**
+   * GET /api/user
+   * Get all users with pagination and filtering
+   */
+  fastify.get('/', {
+    schema: {
+      description: 'Get all users with pagination and filtering',
+      tags: ['User Management'],
+      security: [{ bearerAuth: [] }],
+      querystring: {
+        type: 'object',
+        properties: {
+          page: { type: 'integer', minimum: 1, default: 1 },
+          limit: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+          search: { type: 'string' },
+          isActive: { type: 'boolean' },
+          sortBy: { type: 'string', default: 'createdAt' },
+          sortOrder: { type: 'string', enum: ['asc', 'desc'], default: 'desc' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' },
+            data: {
+              type: 'object',
+              properties: {
+                users: { type: 'array' },
+                pagination: { type: 'object' }
+              }
+            }
+          }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const options = {
+        ...request.query,
+        organisationId: request.organizationId
+      }
+      const users = await UserService.findAll(options, request.language)
+      reply.send(users)
+    } catch (error) {
+      console.error("❌ Get all users error:", error)
+      if (error.statusCode) {
+        throw error
+      }
+      reply.code(500).send({ 
+        statusCode: 500,
+        error: 'Internal Server Error',
+        message: error.message 
+      })
+    }
+  })
+
+  /**
+   * GET /api/user/:id
+   * Get user by ID
+   */
+  fastify.get('/:id', {
+    schema: {
+      description: 'Get user by ID',
+      tags: ['User Management'],
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' }
+        },
+        required: ['id']
+      },
+      response: {
+        200: {
+          type: 'object',
+          additionalProperties: true,
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' },
+            data: {
+              type: 'object',
+              additionalProperties: true,
+              properties: {
+                user: { 
+                  type: 'object',
+                  additionalProperties: true
+                }
+              }
+            }
+          }
+        },
+        404: {
+          type: 'object',
+          properties: {
+            statusCode: { type: 'number' },
+            error: { type: 'string' },
+            message: { type: 'string' }
+          }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const user = await UserService.findById(request.params.id, request.organizationId, request.language)
+      reply.send(user)
+    } catch (error) {
+      console.error("❌ Get user by ID error:", error)
+      if (error.statusCode) {
+        reply.code(error.statusCode).send({
+          statusCode: error.statusCode,
+          error: error.statusCode === 404 ? 'Not Found' : 'Error',
+          message: error.message
+        })
+      } else {
+        reply.code(500).send({ 
+          statusCode: 500,
+          error: 'Internal Server Error',
+          message: error.message 
+        })
+      }
+    }
+  })
+
+  /**
+   * PUT /api/user/:id
+   * Update user by ID
+   */
+  fastify.put('/:id', {
+    preHandler: [validateRequest(adminUpdateUserSchema)],
+    schema: {
+      description: 'Update user by ID',
+      tags: ['User Management'],
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' }
+        },
+        required: ['id']
+      },
+      body: {
+        type: 'object',
+        properties: {
+          email: { type: 'string', format: 'email' },
+          password: { type: 'string', minLength: 8 },
+          firstName: { type: 'string', minLength: 1, maxLength: 100 },
+          lastName: { type: 'string', minLength: 1, maxLength: 100 },
+          language: { type: 'string', enum: ['en', 'es', 'fr'] },
+          employeeId: { type: 'string', maxLength: 50 },
+          isActive: { type: 'boolean' },
+          roleIds: { type: 'array', items: { type: 'string' } }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          additionalProperties: true,
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' },
+            data: {
+              type: 'object',
+              additionalProperties: true,
+              properties: {
+                user: { 
+                  type: 'object',
+                  additionalProperties: true
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const user = await UserService.update(request.params.id, request.body, request.organizationId, request.language)
+      reply.send(user)
+    } catch (error) {
+      console.error("❌ Update user error:", error)
+      if (error.statusCode) {
+        throw error
+      }
+      reply.code(400).send({ 
+        statusCode: 400,
+        error: 'Bad Request',
+        message: error.message 
+      })
+    }
+  })
+
+  /**
+   * DELETE /api/user/:id
+   * Delete user by ID (soft delete)
+   */
+  fastify.delete('/:id', {
+    schema: {
+      description: 'Delete user by ID (deactivate)',
+      tags: ['User Management'],
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' }
+        },
+        required: ['id']
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' }
+          }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      await UserService.delete(request.params.id, request.organizationId, request.language)
+      reply.send({
+        success: true,
+        message: 'User deleted successfully'
+      })
+    } catch (error) {
+      console.error("❌ Delete user error:", error)
+      if (error.statusCode) {
+        throw error
+      }
+      reply.code(500).send({ 
+        statusCode: 500,
+        error: 'Internal Server Error',
+        message: error.message 
+      })
+    }
+  })
+
+  console.log("✅ User routes registered")
 }
