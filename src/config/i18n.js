@@ -21,7 +21,8 @@ const frTranslations = JSON.parse(
 await i18next.init({
   lng: config.defaultLanguage,
   fallbackLng: 'en',
-  debug: config.nodeEnv === 'development',
+  // debug: config.nodeEnv === 'development',
+  debug: false,
   
   resources: {
     en: {

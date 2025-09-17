@@ -37,7 +37,6 @@ const fastify = Fastify({
  */
 async function initializeServer() {
   try {
-    console.log('🚀 Starting JWT Authentication Backend...')
     
     // Connect to database
     await connectDatabase()
@@ -51,44 +50,7 @@ async function initializeServer() {
     // Register API routes
     await fastify.register(apiRoutes, { prefix: '/api' })
     
-    // Add Swagger documentation if in development (temporarily disabled due to plugin version conflicts)
-    // if (config.nodeEnv === 'development') {
-    //   await fastify.register(import('fastify-swagger'), {
-    //     routePrefix: '/docs',
-    //     swagger: {
-    //       info: {
-    //         title: 'JWT Authentication Backend API',
-    //         description: 'Production-ready Node.js backend API with JWT authentication, refresh tokens, multi-tenancy, and internationalization',
-    //         version: '1.0.0'
-    //       },
-    //       host: `localhost:${config.port}`,
-    //       schemes: ['http', 'https'],
-    //       consumes: ['application/json'],
-    //       produces: ['application/json'],
-    //       securityDefinitions: {
-    //         bearerAuth: {
-    //           type: 'apiKey',
-    //           name: 'Authorization',
-    //           in: 'header',
-    //           description: 'Enter: Bearer [token]'
-    //         }
-    //       },
-    //       tags: [
-    //         { name: 'System', description: 'System endpoints' },
-    //         { name: 'Authentication', description: 'Authentication endpoints' },
-    //         { name: 'User', description: 'User management endpoints' },
-    //         { name: 'Admin', description: 'Admin management endpoints' },
-    //         { name: 'Organization', description: 'Organization management endpoints' }
-    //       ]
-    //     },
-    //     exposeRoute: true
-    //   })
-    //   
-    //   console.log('📚 Swagger documentation available at http://localhost:' + config.port + '/docs')
-    // }
-    
-    // Global error handler for unhandled routes
-    fastify.setNotFoundHandler((request, reply) => {
+   fastify.setNotFoundHandler((request, reply) => {
       const language = request.language || config.defaultLanguage
       
       return reply.code(404).send({
@@ -109,17 +71,11 @@ async function initializeServer() {
       host: '0.0.0.0' // Listen on all interfaces
     })
     
-    console.log(`✅ Server running at ${address}`)
-    console.log(`🌍 Environment: ${config.nodeEnv}`)
-    console.log(`🔐 CORS origins: ${config.corsOrigins.join(', ')}`)
-    console.log(`🌐 Default language: ${config.defaultLanguage}`)
-    console.log(`⚡ Rate limiting: ${config.rateLimit.max} requests per ${config.rateLimit.window}`)
     
     // Setup periodic cleanup of expired tokens
     if (config.nodeEnv === 'production') {
       // Run cleanup every hour
       setInterval(cleanupExpiredTokens, 60 * 60 * 1000)
-      console.log('🧹 Periodic token cleanup enabled (every hour)')
     }
     
   } catch (error) {
@@ -132,11 +88,9 @@ async function initializeServer() {
  * Graceful shutdown handler
  */
 async function gracefulShutdown(signal) {
-  console.log(`\\n📶 Received ${signal}, shutting down gracefully...`)
   
   try {
     await fastify.close()
-    console.log('✅ Server closed successfully')
     process.exit(0)
   } catch (error) {
     console.error('❌ Error during shutdown:', error)

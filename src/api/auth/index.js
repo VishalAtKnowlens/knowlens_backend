@@ -184,7 +184,9 @@ export default async function authRoutes(fastify) {
     }
   }, async (request, reply) => {
     const refreshToken = request.cookies.refreshToken
-    
+
+   const decodedToken = decodeURIComponent(refreshToken);
+// Send decodedToken to backend
     if (!refreshToken) {
       return reply.code(401).send({
         statusCode: 401,
@@ -201,7 +203,7 @@ export default async function authRoutes(fastify) {
     const ipAddress = request.ip
     
     const result = await AuthService.refreshToken(
-      refreshToken, 
+      decodedToken, 
       request.language, 
       deviceInfo, 
       ipAddress

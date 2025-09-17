@@ -50,10 +50,12 @@ export function verifyAccessToken(token) {
  */
 export function verifyRefreshToken(token) {
   try {
-    return jwt.verify(token, config.jwt.refreshSecret, {
+
+    const res= jwt.verify(token, config.jwt.refreshSecret, {
       issuer: 'jwt-auth-backend',
       audience: 'jwt-auth-frontend'
     })
+    return res;
   } catch (error) {
     throw new Error(`Invalid refresh token: ${error.message}`)
   }

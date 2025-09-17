@@ -46,7 +46,6 @@ export async function registerCorsPlugin(fastify) {
     preflightContinue: false
   })
   
-  console.log('✅ CORS plugin registered with origins:', config.corsOrigins)
 }
 
 /**
@@ -87,7 +86,6 @@ export async function registerHelmetPlugin(fastify) {
     referrerPolicy: { policy: 'same-origin' }
   })
   
-  console.log('✅ Helmet security plugin registered')
 }
 
 /**
@@ -130,7 +128,6 @@ export async function registerRateLimitPlugin(fastify) {
     }
   })
   
-  console.log(`✅ Rate limiting plugin registered (${config.rateLimit.max} requests per ${config.rateLimit.window})`)
 }
 
 /**
@@ -158,7 +155,6 @@ export async function registerJwtPlugin(fastify) {
     }
   })
   
-  console.log('✅ JWT plugin registered')
 }
 
 /**
@@ -176,7 +172,6 @@ export async function registerCookiePlugin(fastify) {
     }
   })
   
-  console.log('✅ Cookie plugin registered')
 }
 
 /**
@@ -274,7 +269,6 @@ export async function registerErrorHandler(fastify) {
     })
   })
   
-  console.log('✅ Global error handler registered')
 }
 
 /**
@@ -290,5 +284,4 @@ export async function registerAllPlugins(fastify) {
   await registerRateLimitPlugin(fastify) // Rate limiting
   await registerErrorHandler(fastify)  // Error handling
   
-  console.log('✅ All plugins registered successfully')
 }
