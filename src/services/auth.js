@@ -1,17 +1,17 @@
 import { prisma } from '../config/database.js'
 import { hashPassword, comparePassword } from '../utils/password.js'
-import { 
-  generateAccessToken, 
-  generateRefreshToken, 
+import {
+  generateAccessToken,
+  generateRefreshToken,
   verifyRefreshToken,
-  calculateTokenExpiration 
+  calculateTokenExpiration
 } from '../utils/jwt.js'
 import { config } from '../config/index.js'
-import { 
-  translate, 
+import {
+  translate,
   getPreferredLanguage,
   createLocalizedError,
-  createLocalizedSuccess 
+  createLocalizedSuccess
 } from '../config/i18n.js'
 
 /**
@@ -26,32 +26,32 @@ export class AuthService {
    */
   static async register(userData, language = 'en') {
     const { email, password, firstName, lastName, organisationId, language: userLanguage } = userData
-    
+
     try {
       // Check if email already exists
       const existingUser = await prisma.user.findUnique({
         where: { email }
       })
-      
+
       if (existingUser) {
         throw createLocalizedError('auth.email_already_exists', language, 409)
       }
-      
+
       // Check if organization exists and is active
-      const organisation = await prisma.organisation.findUnique({
-        where: { 
+      const organization = await prisma.organization.findUnique({
+        where: {
           id: organisationId,
-          isActive: true 
+          status: 'ACTIVE'
         }
       })
-      
-      if (!organisation) {
+
+      if (!organization) {
         throw createLocalizedError('organization.organization_not_found', language, 404)
       }
-      
+
       // Hash password
       const hashedPassword = await hashPassword(password)
-      
+
       // Create user in database transaction
       const result = await prisma.$transaction(async (tx) => {
         // Create user
@@ -61,23 +61,22 @@ export class AuthService {
             password: hashedPassword,
             firstName,
             lastName,
-            organisationId,
-            language: userLanguage || organisation.language || 'en'
+            organizationId: organisationId,
+            language: userLanguage || organization.language || 'en'
           },
           include: {
-            organisation: true
+            organization: true
           }
         })
-        
+
         // Assign default user role if it exists
         const defaultRole = await tx.role.findFirst({
           where: {
-            organisationId,
-            isDefault: true,
-            name: 'user'
+            organizationId: organisationId,
+            name: 'Learner'
           }
         })
-        
+
         if (defaultRole) {
           await tx.userRole.create({
             data: {
@@ -86,27 +85,27 @@ export class AuthService {
             }
           })
         }
-        
+
         return user
       })
-      
+
       // Remove password from response
       const { password: _, ...userResponse } = result
-      
+
       return createLocalizedSuccess('auth.registration_success', language, {
         user: userResponse
       })
-      
+
     } catch (error) {
       if (error.statusCode) {
         throw error
       }
-      
+
       console.error('Registration error:', error)
       throw createLocalizedError('auth.registration_failed', language, 500)
     }
   }
-  
+
   /**
    * Login user and generate tokens
    * @param {Object} credentials - Login credentials
@@ -117,13 +116,13 @@ export class AuthService {
    */
   static async login(credentials, language = 'en', deviceInfo = null, ipAddress = null) {
     const { email, password } = credentials
-    
+
     try {
       // Find user with organization and roles
       const user = await prisma.user.findUnique({
         where: { email },
         include: {
-          organisation: true,
+          organization: true,
           userRoles: {
             include: {
               role: true
@@ -131,39 +130,39 @@ export class AuthService {
           }
         }
       })
-      
+
       if (!user) {
         throw createLocalizedError('auth.login_failed', language, 401)
       }
-      
+
       // Check if user and organization are active
-      if (!user.isActive) {
+      if (user.status !== 'ACTIVE') {
         throw createLocalizedError('auth.account_inactive', language, 401)
       }
-      
-      if (!user.organisation || !user.organisation.isActive) {
+
+      if (!user.organization || user.organization.status !== 'ACTIVE') {
         throw createLocalizedError('auth.organization_inactive', language, 401)
       }
-      
+
       // Verify password
       const isPasswordValid = await comparePassword(password, user.password)
       if (!isPasswordValid) {
         throw createLocalizedError('auth.login_failed', language, 401)
       }
-      
+
       // Generate tokens
       const tokenPayload = {
         userId: user.id,
-        organisationId: user.organisationId,
+        organizationId: user.organizationId,
         email: user.email
       }
-      
+
       const accessToken = generateAccessToken(tokenPayload)
       const refreshToken = generateRefreshToken(tokenPayload)
-      
+
       // Store refresh token in database
       const refreshTokenExpiry = calculateTokenExpiration(config.jwt.refreshExpiresIn)
-      
+
       await prisma.refreshToken.create({
         data: {
           token: refreshToken,
@@ -173,13 +172,13 @@ export class AuthService {
           ipAddress
         }
       })
-      
+
       // Update last login time
       await prisma.user.update({
         where: { id: user.id },
         data: { lastLoginAt: new Date() }
       })
-      
+
       // Remove password from response and format user data safely
       const userResponse = JSON.parse(JSON.stringify({
         id: user.id,
@@ -188,18 +187,17 @@ export class AuthService {
         lastName: user.lastName,
         language: user.language,
         employeeId: user.employeeId,
-        profilePictureUrl: user.profilePictureUrl,
-        isActive: user.isActive,
+        photoUrl: user.photoUrl,
+        status: user.status,
         lastLoginAt: user.lastLoginAt,
-        emailVerified: user.emailVerified,
+        isEmailVerified: user.isEmailVerified,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
-        organisationId: user.organisationId,
-        organisation: {
-          id: user.organisation?.id,
-          name: user.organisation?.name,
-          slug: user.organisation?.slug,
-          language: user.organisation?.language
+        organizationId: user.organizationId,
+        organization: {
+          id: user.organization?.id,
+          name: user.organization?.name,
+          slug: user.organization?.slug
         },
         roles: user.userRoles?.map(ur => ({
           id: ur.role?.id,
@@ -208,23 +206,23 @@ export class AuthService {
           permissions: ur.role?.permissions
         })) || []
       }))
-      
+
       return createLocalizedSuccess('auth.login_success', language, {
         user: userResponse,
         accessToken,
         refreshToken
       })
-      
+
     } catch (error) {
       if (error.statusCode) {
         throw error
       }
-      
+
       console.error('Login error:', error)
       throw createLocalizedError('auth.login_failed', language, 500)
     }
   }
-  
+
   /**
    * Refresh access token using refresh token
    * @param {string} refreshToken - Refresh token
@@ -243,7 +241,7 @@ export class AuthService {
         include: {
           user: {
             include: {
-              organisation: true,
+              organization: true,
               userRoles: {
                 include: {
                   role: true
@@ -253,11 +251,11 @@ export class AuthService {
           }
         }
       })
-      
+
       if (!storedToken) {
         throw createLocalizedError('auth.invalid_refresh_token', language, 401)
       }
-      
+
       // Check if token is expired
       if (storedToken.expiresAt < new Date()) {
         // Clean up expired token
@@ -266,33 +264,33 @@ export class AuthService {
         })
         throw createLocalizedError('auth.refresh_token_expired', language, 401)
       }
-      
+
       // Check if user and organization are still active
-      if (!storedToken.user.isActive || !storedToken.user.organisation?.isActive) {
+      if (storedToken.user.status !== 'ACTIVE' || storedToken.user.organization?.status !== 'ACTIVE') {
         // Revoke all tokens for inactive users
         await prisma.refreshToken.deleteMany({
           where: { userId: storedToken.user.id }
         })
         throw createLocalizedError('auth.account_inactive', language, 401)
       }
-      
+
       // Generate new tokens
       const tokenPayload = {
         userId: storedToken.user.id,
-        organisationId: storedToken.user.organisationId,
+        organizationId: storedToken.user.organizationId,
         email: storedToken.user.email
       }
-      
+
       const newAccessToken = generateAccessToken(tokenPayload)
       const newRefreshToken = generateRefreshToken(tokenPayload)
-      
+
       // Perform token rotation in transaction
       await prisma.$transaction(async (tx) => {
         // Delete old refresh token
         await tx.refreshToken.delete({
           where: { id: storedToken.id }
         })
-        
+
         // Create new refresh token
         const refreshTokenExpiry = calculateTokenExpiration(config.jwt.refreshExpiresIn)
         await tx.refreshToken.create({
@@ -305,7 +303,7 @@ export class AuthService {
           }
         })
       })
-      
+
       // Remove password from user response and format user data safely
       const userResponse = JSON.parse(JSON.stringify({
         id: storedToken.user.id,
@@ -314,18 +312,17 @@ export class AuthService {
         lastName: storedToken.user.lastName,
         language: storedToken.user.language,
         employeeId: storedToken.user.employeeId,
-        profilePictureUrl: storedToken.user.profilePictureUrl,
-        isActive: storedToken.user.isActive,
+        photoUrl: storedToken.user.photoUrl,
+        status: storedToken.user.status,
         lastLoginAt: storedToken.user.lastLoginAt,
-        emailVerified: storedToken.user.emailVerified,
+        isEmailVerified: storedToken.user.isEmailVerified,
         createdAt: storedToken.user.createdAt,
         updatedAt: storedToken.user.updatedAt,
-        organisationId: storedToken.user.organisationId,
-        organisation: {
-          id: storedToken.user.organisation?.id,
-          name: storedToken.user.organisation?.name,
-          slug: storedToken.user.organisation?.slug,
-          language: storedToken.user.organisation?.language
+        organizationId: storedToken.user.organizationId,
+        organization: {
+          id: storedToken.user.organization?.id,
+          name: storedToken.user.organization?.name,
+          slug: storedToken.user.organization?.slug
         },
         roles: storedToken.user.userRoles?.map(ur => ({
           id: ur.role?.id,
@@ -334,27 +331,27 @@ export class AuthService {
           permissions: ur.role?.permissions
         })) || []
       }))
-      
+
       return createLocalizedSuccess('auth.token_refresh_success', language, {
         user: userResponse,
         accessToken: newAccessToken,
         refreshToken: newRefreshToken
       })
-      
+
     } catch (error) {
       if (error.statusCode) {
         throw error
       }
-      
+
       if (error.message.includes('expired') || error.message.includes('invalid')) {
         throw createLocalizedError('auth.invalid_refresh_token', language, 401)
       }
-      
+
       console.error('Token refresh error:', error)
       throw createLocalizedError('auth.token_refresh_failed', language, 500)
     }
   }
-  
+
   /**
    * Logout user (revoke refresh token)
    * @param {string} refreshToken - Refresh token to revoke
@@ -366,21 +363,21 @@ export class AuthService {
       if (!refreshToken) {
         return createLocalizedSuccess('auth.logout_success', language)
       }
-      
+
       // Delete refresh token from database
       await prisma.refreshToken.deleteMany({
         where: { token: refreshToken }
       })
-      
+
       return createLocalizedSuccess('auth.logout_success', language)
-      
+
     } catch (error) {
       console.error('Logout error:', error)
       // Don't fail logout even if there's an error
       return createLocalizedSuccess('auth.logout_success', language)
     }
   }
-  
+
   /**
    * Revoke all refresh tokens for a user (logout from all devices)
    * @param {string} userId - User ID
@@ -393,17 +390,17 @@ export class AuthService {
       const result = await prisma.refreshToken.deleteMany({
         where: { userId }
       })
-      
+
       return createLocalizedSuccess('auth.all_sessions_revoked', language, {
         revokedTokens: result.count
       })
-      
+
     } catch (error) {
       console.error('Token revocation error:', error)
       throw createLocalizedError('error.internal_server_error', language, 500)
     }
   }
-  
+
   /**
    * Validate access token and return user data
    * @param {string} userId - User ID from token
@@ -413,12 +410,12 @@ export class AuthService {
   static async validateToken(userId, language = 'en') {
     try {
       const user = await prisma.user.findUnique({
-        where: { 
+        where: {
           id: userId,
-          isActive: true 
+          status: 'ACTIVE'
         },
         include: {
-          organisation: true,
+          organization: true,
           userRoles: {
             include: {
               role: true
@@ -426,28 +423,28 @@ export class AuthService {
           }
         }
       })
-      
-      if (!user || !user.organisation?.isActive) {
+
+      if (!user || user.organization?.status !== 'ACTIVE') {
         throw createLocalizedError('auth.account_inactive', language, 401)
       }
-      
+
       // Remove password from response
       const { password: _, ...userResponse } = user
-      
+
       return createLocalizedSuccess('success.data_retrieved', language, {
         user: userResponse
       })
-      
+
     } catch (error) {
       if (error.statusCode) {
         throw error
       }
-      
+
       console.error('Token validation error:', error)
       throw createLocalizedError('auth.token_invalid', language, 401)
     }
   }
-  
+
   /**
    * Change user password
    * @param {string} userId - User ID
@@ -462,20 +459,20 @@ export class AuthService {
       const user = await prisma.user.findUnique({
         where: { id: userId }
       })
-      
+
       if (!user) {
         throw createLocalizedError('user.user_not_found', language, 404)
       }
-      
+
       // Verify current password
       const isCurrentPasswordValid = await comparePassword(currentPassword, user.password)
       if (!isCurrentPasswordValid) {
         throw createLocalizedError('auth.password_mismatch', language, 400)
       }
-      
+
       // Hash new password
       const hashedNewPassword = await hashPassword(newPassword)
-      
+
       // Update password and revoke all refresh tokens in transaction
       await prisma.$transaction(async (tx) => {
         // Update password
@@ -483,25 +480,25 @@ export class AuthService {
           where: { id: userId },
           data: { password: hashedNewPassword }
         })
-        
+
         // Revoke all refresh tokens (force re-login on all devices)
         await tx.refreshToken.deleteMany({
           where: { userId }
         })
       })
-      
+
       return createLocalizedSuccess('auth.password_changed', language)
-      
+
     } catch (error) {
       if (error.statusCode) {
         throw error
       }
-      
+
       console.error('Password change error:', error)
       throw createLocalizedError('error.internal_server_error', language, 500)
     }
   }
-  
+
   /**
    * Get user's active sessions (refresh tokens)
    * @param {string} userId - User ID
@@ -511,7 +508,7 @@ export class AuthService {
   static async getActiveSessions(userId, language = 'en') {
     try {
       const sessions = await prisma.refreshToken.findMany({
-        where: { 
+        where: {
           userId,
           expiresAt: {
             gt: new Date()
@@ -528,11 +525,11 @@ export class AuthService {
           createdAt: 'desc'
         }
       })
-      
+
       return createLocalizedSuccess('success.data_retrieved', language, {
         sessions
       })
-      
+
     } catch (error) {
       console.error('Get sessions error:', error)
       throw createLocalizedError('error.internal_server_error', language, 500)

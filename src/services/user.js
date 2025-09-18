@@ -1,5 +1,6 @@
 import { prisma } from '../config/database.js'
 import { hashPassword } from '../utils/password.js'
+import bcrypt from 'bcrypt'
 import { 
   createLocalizedError,
   createLocalizedSuccess 
@@ -17,8 +18,22 @@ export class UserService {
    */
   static async create(userData, language = 'en') {
     try {
-      const { email, password, firstName, lastName, organisationId, language: userLanguage, employeeId, roleIds = [] } = userData
-      
+      const { 
+        email, 
+        password, 
+        firstName, 
+        lastName, 
+        organizationId, 
+        language: userLanguage, 
+        employeeId, 
+        username,
+        type = 'REGULAR',
+        departmentId,
+        managerId,
+        roleIds = [],
+        divisionId
+      } = userData
+
       // Check if email already exists
       const existingUser = await prisma.user.findUnique({
         where: { email }
@@ -27,21 +42,33 @@ export class UserService {
       if (existingUser) {
         throw createLocalizedError('auth.email_already_exists', language, 409)
       }
+
+      // Check if username already exists
+      if (username) {
+        const existingUsername = await prisma.user.findUnique({
+          where: { username }
+        })
+        
+        if (existingUsername) {
+          throw createLocalizedError('auth.username_already_exists', language, 409)
+        }
+      }
       
       // Check if organization exists and is active
-      const organisation = await prisma.organisation.findUnique({
+      const organization = await prisma.organization.findUnique({
         where: { 
-          id: organisationId,
-          isActive: true 
+          id: organizationId,
+          status: 'ACTIVE'
         }
       })
       
-      if (!organisation) {
+      if (!organization) {
         throw createLocalizedError('organization.organization_not_found', language, 404)
       }
-      
-      // Hash password
+
+      // Hash password and generate salt
       const hashedPassword = await hashPassword(password)
+      const salt = await bcrypt.genSalt(12)
       
       // Create user in database transaction
       const result = await prisma.$transaction(async (tx) => {
@@ -49,32 +76,28 @@ export class UserService {
         const user = await tx.user.create({
           data: {
             email,
+            username: username || email.split('@')[0],
             password: hashedPassword,
+            salt,
             firstName,
             lastName,
-            organisationId,
-            language: userLanguage || organisation.language || 'en',
-            employeeId: employeeId || null
-          },
-          include: {
-            organisation: {
-              select: {
-                id: true,
-                name: true,
-                slug: true,
-                language: true
-              }
-            }
+            organizationId,
+            language: userLanguage || 'en',
+            employeeId: employeeId || null,
+            type,
+            departmentId: departmentId || null,
+            managerId: managerId || null,
+            status: 'ACTIVE'
           }
         })
-        
+
         // Assign roles if provided
         if (roleIds && roleIds.length > 0) {
           // Verify all roles exist and belong to the organization
           const roles = await tx.role.findMany({
             where: {
               id: { in: roleIds },
-              organisationId
+              organizationId
             }
           })
           
@@ -82,19 +105,30 @@ export class UserService {
             throw createLocalizedError('user.invalid_roles', language, 400)
           }
           
-          // Create user role assignments
+          // Create user role assignments (both old and new systems)
           await tx.userRole.createMany({
             data: roleIds.map(roleId => ({
               userId: user.id,
               roleId
             }))
           })
+
+          // Create new role assignments if divisionId provided
+          if (divisionId) {
+            await tx.roleAssignment.createMany({
+              data: roleIds.map(roleId => ({
+                userId: user.id,
+                roleId,
+                divisionId
+              }))
+            })
+          }
         } else {
           // Assign default user role if no roles specified
           const defaultRole = await tx.role.findFirst({
             where: {
-              organisationId,
-              name: 'user'
+              organizationId,
+              name: 'Learner'
             }
           })
           
@@ -105,54 +139,40 @@ export class UserService {
                 roleId: defaultRole.id
               }
             })
+
+            // Create role assignment if divisionId provided
+            if (divisionId) {
+              await tx.roleAssignment.create({
+                data: {
+                  userId: user.id,
+                  roleId: defaultRole.id,
+                  divisionId
+                }
+              })
+            }
           }
+        }
+
+        // Create user org profile if additional org data provided
+        if (divisionId || departmentId) {
+          await tx.userOrgProfile.create({
+            data: {
+              userId: user.id,
+              divisionId: divisionId || null,
+              departmentId: departmentId || null,
+              joiningDate: new Date()
+            }
+          })
         }
         
         return user
       })
       
       // Get the created user with all relations
-      const createdUser = await prisma.user.findUnique({
-        where: { id: result.id },
-        select: {
-          id: true,
-          email: true,
-          firstName: true,
-          lastName: true,
-          language: true,
-          employeeId: true,
-          profilePictureUrl: true,
-          isActive: true,
-          emailVerified: true,
-          lastLoginAt: true,
-          createdAt: true,
-          updatedAt: true,
-          organisationId: true,
-          organisation: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-              language: true
-            }
-          },
-          userRoles: {
-            include: {
-              role: {
-                select: {
-                  id: true,
-                  name: true,
-                  description: true,
-                  permissions: true
-                }
-              }
-            }
-          }
-        }
-      })
+      const createdUser = await this.findById(result.id, null, language)
       
       return createLocalizedSuccess('user.user_created', language, {
-        user: createdUser
+        user: createdUser.data.user
       })
       
     } catch (error) {
@@ -174,11 +194,14 @@ export class UserService {
   static async findAll(options = {}, language = 'en') {
     try {
       const {
-        organisationId,
+        organizationId,
         page = 1,
         limit = 20,
         search,
-        isActive,
+        status,
+        type,
+        departmentId,
+        divisionId,
         sortBy = 'createdAt',
         sortOrder = 'desc'
       } = options
@@ -189,12 +212,20 @@ export class UserService {
       // Build where clause
       const where = {}
       
-      if (organisationId) {
-        where.organisationId = organisationId
+      if (organizationId) {
+        where.organizationId = organizationId
       }
       
-      if (typeof isActive === 'boolean') {
-        where.isActive = isActive
+      if (status) {
+        where.status = status
+      }
+
+      if (type) {
+        where.type = type
+      }
+
+      if (departmentId) {
+        where.departmentId = departmentId
       }
       
       if (search) {
@@ -202,6 +233,7 @@ export class UserService {
           { firstName: { contains: search, mode: 'insensitive' } },
           { lastName: { contains: search, mode: 'insensitive' } },
           { email: { contains: search, mode: 'insensitive' } },
+          { username: { contains: search, mode: 'insensitive' } },
           { employeeId: { contains: search, mode: 'insensitive' } }
         ]
       }
@@ -215,24 +247,32 @@ export class UserService {
           orderBy: { [sortBy]: sortOrder },
           select: {
             id: true,
+            username: true,
             email: true,
             firstName: true,
             lastName: true,
             language: true,
             employeeId: true,
-            profilePictureUrl: true,
-            isActive: true,
-            emailVerified: true,
+            photoUrl: true,
+            type: true,
+            status: true,
+            isEmailVerified: true,
             lastLoginAt: true,
             createdAt: true,
             updatedAt: true,
-            organisationId: true,
-            organisation: {
+            organizationId: true,
+            departmentId: true,
+            organization: {
               select: {
                 id: true,
                 name: true,
-                slug: true,
-                language: true
+                slug: true
+              }
+            },
+            department: {
+              select: {
+                id: true,
+                name: true
               }
             },
             userRoles: {
@@ -240,8 +280,7 @@ export class UserService {
                 role: {
                   select: {
                     id: true,
-                    name: true,
-                    description: true
+                    name: true
                   }
                 }
               }
@@ -273,41 +312,58 @@ export class UserService {
   
   /**
    * Find user by ID
-   * @param {string} userId - User ID
-   * @param {string} organisationId - Organization ID for scope
+   * @param {number} userId - User ID
+   * @param {number} organizationId - Organization ID for scope
    * @param {string} language - Language for response
    * @returns {Object} User data
    */
-  static async findById(userId, organisationId = null, language = 'en') {
+  static async findById(userId, organizationId = null, language = 'en') {
     try {
       const where = { id: userId }
       
-      if (organisationId) {
-        where.organisationId = organisationId
+      if (organizationId) {
+        where.organizationId = organizationId
       }
       
       const user = await prisma.user.findUnique({
         where,
         select: {
           id: true,
+          username: true,
           email: true,
           firstName: true,
           lastName: true,
           language: true,
           employeeId: true,
-          profilePictureUrl: true,
-          isActive: true,
-          emailVerified: true,
+          photoUrl: true,
+          type: true,
+          status: true,
+          isEmailVerified: true,
           lastLoginAt: true,
           createdAt: true,
           updatedAt: true,
-          organisationId: true,
-          organisation: {
+          organizationId: true,
+          departmentId: true,
+          managerId: true,
+          organization: {
             select: {
               id: true,
               name: true,
-              slug: true,
-              language: true
+              slug: true
+            }
+          },
+          department: {
+            select: {
+              id: true,
+              name: true
+            }
+          },
+          manager: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true
             }
           },
           userRoles: {
@@ -315,9 +371,45 @@ export class UserService {
               role: {
                 select: {
                   id: true,
-                  name: true,
-                  description: true,
-                  permissions: true
+                  name: true
+                }
+              }
+            }
+          },
+          roleAssignments: {
+            include: {
+              role: {
+                select: {
+                  id: true,
+                  name: true
+                }
+              },
+              division: {
+                select: {
+                  id: true,
+                  name: true
+                }
+              }
+            }
+          },
+          userOrgProfile: {
+            include: {
+              division: {
+                select: {
+                  id: true,
+                  name: true
+                }
+              },
+              department: {
+                select: {
+                  id: true,
+                  name: true
+                }
+              },
+              designation: {
+                select: {
+                  id: true,
+                  name: true
                 }
               }
             }
@@ -345,18 +437,18 @@ export class UserService {
   
   /**
    * Update user
-   * @param {string} userId - User ID
+   * @param {number} userId - User ID
    * @param {Object} updateData - Data to update
-   * @param {string} organisationId - Organization ID for scope
+   * @param {number} organizationId - Organization ID for scope
    * @param {string} language - Language for response
    * @returns {Object} Updated user
    */
-  static async update(userId, updateData, organisationId = null, language = 'en') {
+  static async update(userId, updateData, organizationId = null, language = 'en') {
     try {
       const where = { id: userId }
       
-      if (organisationId) {
-        where.organisationId = organisationId
+      if (organizationId) {
+        where.organizationId = organizationId
       }
       
       // Check if user exists
@@ -376,16 +468,28 @@ export class UserService {
           throw createLocalizedError('auth.email_already_exists', language, 409)
         }
       }
+
+      // If username is being updated, check for conflicts
+      if (updateData.username && updateData.username !== existingUser.username) {
+        const usernameConflict = await prisma.user.findUnique({
+          where: { username: updateData.username }
+        })
+        
+        if (usernameConflict) {
+          throw createLocalizedError('auth.username_already_exists', language, 409)
+        }
+      }
       
       // Hash password if being updated
       if (updateData.password) {
         updateData.password = await hashPassword(updateData.password)
+        updateData.salt = await bcrypt.genSalt(12)
       }
       
       // Update user in transaction
       const result = await prisma.$transaction(async (tx) => {
-        // Extract role IDs if provided
-        const { roleIds, ...userData } = updateData
+        // Extract role IDs and division info if provided
+        const { roleIds, divisionId, ...userData } = updateData
         
         // Update user data
         const updatedUser = await tx.user.update({
@@ -402,6 +506,10 @@ export class UserService {
           await tx.userRole.deleteMany({
             where: { userId }
           })
+
+          await tx.roleAssignment.deleteMany({
+            where: { userId }
+          })
           
           // Add new roles if any
           if (roleIds && roleIds.length > 0) {
@@ -409,7 +517,7 @@ export class UserService {
             const roles = await tx.role.findMany({
               where: {
                 id: { in: roleIds },
-                organisationId: existingUser.organisationId
+                organizationId: existingUser.organizationId
               }
             })
             
@@ -424,6 +532,43 @@ export class UserService {
                 roleId
               }))
             })
+
+            // Create new role assignments if divisionId provided
+            if (divisionId) {
+              await tx.roleAssignment.createMany({
+                data: roleIds.map(roleId => ({
+                  userId,
+                  roleId,
+                  divisionId
+                }))
+              })
+            }
+          }
+        }
+
+        // Update user org profile if needed
+        if (divisionId !== undefined || updateData.departmentId !== undefined) {
+          const existingProfile = await tx.userOrgProfile.findUnique({
+            where: { userId }
+          })
+
+          if (existingProfile) {
+            await tx.userOrgProfile.update({
+              where: { userId },
+              data: {
+                divisionId: divisionId || existingProfile.divisionId,
+                departmentId: updateData.departmentId || existingProfile.departmentId
+              }
+            })
+          } else if (divisionId || updateData.departmentId) {
+            await tx.userOrgProfile.create({
+              data: {
+                userId,
+                divisionId: divisionId || null,
+                departmentId: updateData.departmentId || null,
+                joiningDate: new Date()
+              }
+            })
           }
         }
         
@@ -431,47 +576,10 @@ export class UserService {
       })
       
       // Get updated user with relations
-      const userWithRelations = await prisma.user.findUnique({
-        where: { id: userId },
-        select: {
-          id: true,
-          email: true,
-          firstName: true,
-          lastName: true,
-          language: true,
-          employeeId: true,
-          profilePictureUrl: true,
-          isActive: true,
-          emailVerified: true,
-          lastLoginAt: true,
-          createdAt: true,
-          updatedAt: true,
-          organisationId: true,
-          organisation: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-              language: true
-            }
-          },
-          userRoles: {
-            include: {
-              role: {
-                select: {
-                  id: true,
-                  name: true,
-                  description: true,
-                  permissions: true
-                }
-              }
-            }
-          }
-        }
-      })
+      const userWithRelations = await this.findById(userId, null, language)
       
       return createLocalizedSuccess('user.user_updated', language, {
-        user: userWithRelations
+        user: userWithRelations.data.user
       })
       
     } catch (error) {
@@ -486,17 +594,17 @@ export class UserService {
   
   /**
    * Delete user (soft delete by deactivating)
-   * @param {string} userId - User ID
-   * @param {string} organisationId - Organization ID for scope
+   * @param {number} userId - User ID
+   * @param {number} organizationId - Organization ID for scope
    * @param {string} language - Language for response
    * @returns {Object} Success message
    */
-  static async delete(userId, organisationId = null, language = 'en') {
+  static async delete(userId, organizationId = null, language = 'en') {
     try {
       const where = { id: userId }
       
-      if (organisationId) {
-        where.organisationId = organisationId
+      if (organizationId) {
+        where.organizationId = organizationId
       }
       
       // Check if user exists
@@ -512,13 +620,18 @@ export class UserService {
         await tx.user.update({
           where,
           data: { 
-            isActive: false,
+            status: 'INACTIVE',
             updatedAt: new Date()
           }
         })
         
         // Revoke all refresh tokens
         await tx.refreshToken.deleteMany({
+          where: { userId }
+        })
+
+        // Revoke all sessions
+        await tx.session.deleteMany({
           where: { userId }
         })
       })
@@ -537,17 +650,17 @@ export class UserService {
   
   /**
    * Hard delete user (permanently remove from database)
-   * @param {string} userId - User ID
-   * @param {string} organisationId - Organization ID for scope
+   * @param {number} userId - User ID
+   * @param {number} organizationId - Organization ID for scope
    * @param {string} language - Language for response
    * @returns {Object} Success message
    */
-  static async hardDelete(userId, organisationId = null, language = 'en') {
+  static async hardDelete(userId, organizationId = null, language = 'en') {
     try {
       const where = { id: userId }
       
-      if (organisationId) {
-        where.organisationId = organisationId
+      if (organizationId) {
+        where.organizationId = organizationId
       }
       
       // Check if user exists
@@ -568,6 +681,71 @@ export class UserService {
       }
       
       console.error('Hard delete user error:', error)
+      throw createLocalizedError('error.internal_server_error', language, 500)
+    }
+  }
+
+  /**
+   * Get user's course enrollments
+   * @param {number} userId - User ID
+   * @param {string} language - Language for response
+   * @returns {Object} User's course enrollments
+   */
+  static async getUserEnrollments(userId, language = 'en') {
+    try {
+      const enrollments = await prisma.courseEnrollment.findMany({
+        where: { userId },
+        include: {
+          course: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              thumbnailUrl: true,
+              durationInMinutes: true,
+              totalPoints: true
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      })
+
+      return createLocalizedSuccess('success.data_retrieved', language, {
+        enrollments
+      })
+    } catch (error) {
+      console.error('Get user enrollments error:', error)
+      throw createLocalizedError('error.internal_server_error', language, 500)
+    }
+  }
+
+  /**
+   * Get user's quiz attempts
+   * @param {number} userId - User ID
+   * @param {string} language - Language for response
+   * @returns {Object} User's quiz attempts
+   */
+  static async getUserQuizAttempts(userId, language = 'en') {
+    try {
+      const attempts = await prisma.quizAttempt.findMany({
+        where: { userId },
+        include: {
+          quiz: {
+            select: {
+              id: true,
+              title: true,
+              passThreshold: true
+            }
+          }
+        },
+        orderBy: { startedAt: 'desc' }
+      })
+
+      return createLocalizedSuccess('success.data_retrieved', language, {
+        attempts
+      })
+    } catch (error) {
+      console.error('Get user quiz attempts error:', error)
       throw createLocalizedError('error.internal_server_error', language, 500)
     }
   }
