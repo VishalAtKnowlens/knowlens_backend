@@ -42,6 +42,7 @@
     "fastify-swagger": "^5.1.1",
     "i18next": "^23.7.6",
     "jsonwebtoken": "^9.0.2",
+    "node-fetch": "^3.3.2",
     "zod": "^3.22.4"
   },
   "devDependencies": {

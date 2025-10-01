@@ -70,7 +70,7 @@ async function initializeServer() {
       port: config.port,
       host: '0.0.0.0' // Listen on all interfaces
     })
-    
+    console.log("address",address);
     
     // Setup periodic cleanup of expired tokens
     if (config.nodeEnv === 'production') {
@@ -166,7 +166,7 @@ export async function build(opts = {}) {
 }
 
 // Start the server only if this file is run directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === `file://${process.argv[1]}` || process.argv[1].endsWith('src/server.js') || process.argv[1].endsWith('src\\server.js')) {
   initializeServer()
 }
 
