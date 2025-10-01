@@ -114,7 +114,60 @@ process.on('uncaughtException', (error) => {
   process.exit(1)
 })
 
-// Start the server
-initializeServer()
+/**
+ * Build function for testing
+ */
+export async function build(opts = {}) {
+  const app = Fastify({
+    logger: opts.logger !== undefined ? opts.logger : false,
+    ajv: {
+      customOptions: {
+        removeAdditional: false,
+        useDefaults: true,
+        coerceTypes: 'array'
+      }
+    },
+    trustProxy: true
+  })
+
+  try {
+    // Connect to database
+    await connectDatabase()
+    
+    // Register all plugins (CORS, security, JWT, etc.)
+    await registerAllPlugins(app)
+    
+    // Add global language detection hook
+    app.addHook('preHandler', detectLanguage)
+    
+    // Register API routes
+    await app.register(apiRoutes, { prefix: '/api' })
+    
+    app.setNotFoundHandler((request, reply) => {
+      const language = request.language || config.defaultLanguage
+      
+      return reply.code(404).send({
+        statusCode: 404,
+        error: 'Not Found',
+        message: language === 'es' 
+          ? 'Ruta no encontrada'
+          : language === 'fr'
+          ? 'Route non trouvée'
+          : 'Route not found',
+        path: request.url
+      })
+    })
+
+    return app
+  } catch (error) {
+    console.error('❌ Failed to build app:', error)
+    throw error
+  }
+}
+
+// Start the server only if this file is run directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  initializeServer()
+}
 
 export default fastify

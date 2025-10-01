@@ -2,6 +2,9 @@ import authRoutes from './auth/index.js'
 import userRoutes from './user/index.js'
 import adminRoutes from './admin/index.js'
 import organizationRoutes from './organization/index.js'
+import divisionRoutes from './division/index.js'
+import departmentRoutes from './department/index.js'
+import roleAssignmentRoutes from './role-assignment/index.js'
 
 /**
  * Register all API routes
@@ -80,6 +83,9 @@ export default async function apiRoutes(fastify) {
   await fastify.register(userRoutes, { prefix: '/user' })
   await fastify.register(adminRoutes, { prefix: '/admin' })
   await fastify.register(organizationRoutes, { prefix: '/organization' })
+  await fastify.register(divisionRoutes, { prefix: '/divisions' })
+  await fastify.register(departmentRoutes, { prefix: '/departments' })
+  await fastify.register(roleAssignmentRoutes, { prefix: '/role-assignments' })
   
   // 404 handler for API routes
   fastify.setNotFoundHandler((request, reply) => {

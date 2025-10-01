@@ -26,10 +26,10 @@ export async function authenticate(request, reply) {
     const user = await prisma.user.findUnique({
       where: { 
         id: decoded.userId,
-        isActive: true
+        status: 'ACTIVE'
       },
       include: {
-        organisation: true,
+        organization: true,
         userRoles: {
           include: {
             role: true
@@ -46,7 +46,7 @@ export async function authenticate(request, reply) {
     }
     
     // Check if organization is active
-    if (!user.organisation || !user.organisation.isActive) {
+    if (!user.organization || user.organization.status !== 'ACTIVE') {
       const language = getPreferredLanguage(request, user)
       return reply.code(401).send(
         createLocalizedError('auth.organization_inactive', language, 401)
@@ -99,10 +99,10 @@ export async function optionalAuthenticate(request, reply) {
     const user = await prisma.user.findUnique({
       where: { 
         id: decoded.userId,
-        isActive: true
+        status: 'ACTIVE'
       },
       include: {
-        organisation: true,
+        organization: true,
         userRoles: {
           include: {
             role: true
@@ -111,7 +111,7 @@ export async function optionalAuthenticate(request, reply) {
       }
     })
     
-    if (user && user.organisation?.isActive) {
+    if (user && user.organization?.status === 'ACTIVE') {
       request.user = user
       request.userPermissions = extractUserPermissions(user)
     } else {
@@ -160,7 +160,7 @@ export function requirePermissions(requiredPermissions = []) {
  * @param {Object} reply - Fastify reply object
  */
 export async function enforceOrganizationScope(request, reply) {
-  if (!request.user?.organisationId) {
+  if (!request.user?.organizationId) {
     const language = getPreferredLanguage(request, request.user)
     return reply.code(401).send(
       createLocalizedError('auth.access_denied', language, 401)
@@ -168,7 +168,7 @@ export async function enforceOrganizationScope(request, reply) {
   }
   
   // Add organization filter to request context
-  request.organizationId = request.user.organisationId
+  request.organizationId = request.user.organizationId
 }
 
 /**

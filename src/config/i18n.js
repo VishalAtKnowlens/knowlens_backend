@@ -108,8 +108,8 @@ export function getPreferredLanguage(request, user = null) {
     return user.language
   }
   
-  if (user?.organisation?.language && isSupportedLanguage(user.organisation.language)) {
-    return user.organisation.language
+  if (user?.organization?.language && isSupportedLanguage(user.organization.language)) {
+    return user.organization.language
   }
   
   // Parse Accept-Language header

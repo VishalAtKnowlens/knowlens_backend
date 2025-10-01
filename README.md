@@ -409,7 +409,7 @@ curl -X POST http://localhost:5000/api/auth/register \\
     "password": "TestPass123!",
     "firstName": "Test",
     "lastName": "User",
-    "organisationId": "uuid-here"
+    "organizationId": "uuid-here"
   }'
 
 # Login

@@ -25,7 +25,7 @@ export class AuthService {
    * @returns {Object} Registration result
    */
   static async register(userData, language = 'en') {
-    const { email, password, firstName, lastName, organisationId, language: userLanguage } = userData
+    const { email, password, firstName, lastName, organizationId, language: userLanguage } = userData
 
     try {
       // Check if email already exists
@@ -40,7 +40,7 @@ export class AuthService {
       // Check if organization exists and is active
       const organization = await prisma.organization.findUnique({
         where: {
-          id: organisationId,
+          id: organizationId,
           status: 'ACTIVE'
         }
       })
@@ -61,7 +61,7 @@ export class AuthService {
             password: hashedPassword,
             firstName,
             lastName,
-            organizationId: organisationId,
+            organizationId: organizationId,
             language: userLanguage || organization.language || 'en'
           },
           include: {
@@ -72,7 +72,7 @@ export class AuthService {
         // Assign default user role if it exists
         const defaultRole = await tx.role.findFirst({
           where: {
-            organizationId: organisationId,
+            organizationId: organizationId,
             name: 'Learner'
           }
         })
@@ -130,7 +130,7 @@ export class AuthService {
           }
         }
       })
-
+     console.log("users ",user);
       if (!user) {
         throw createLocalizedError('auth.login_failed', language, 401)
       }

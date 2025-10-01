@@ -260,6 +260,227 @@ export class AdminService {
   }
 
   /**
+   * Create a new user
+   * @param {Object} userData - User data
+   * @param {string} organizationId - Organization ID
+   * @param {string} language - Language for response
+   * @returns {Object} Created user
+   */
+  static async createUser(userData, organizationId, language = 'en') {
+    try {
+      // Check if email already exists
+      const existingUser = await prisma.user.findUnique({
+        where: { email: userData.email }
+      })
+      
+      if (existingUser) {
+        throw createLocalizedError('auth.email_already_exists', language, 409)
+      }
+      
+      // Validate role IDs if provided
+      if (userData.roleIds?.length > 0) {
+        const roles = await prisma.role.findMany({
+          where: {
+            id: { in: userData.roleIds },
+            organizationId: organizationId
+          }
+        })
+        
+        if (roles.length !== userData.roleIds.length) {
+          throw createLocalizedError('role.role_not_found', language, 404)
+        }
+      }
+      
+      // Hash password
+      const hashedPassword = await hashPassword(userData.password)
+      
+      // Create user with roles in transaction
+      const result = await prisma.$transaction(async (tx) => {
+        // Create user
+        const user = await tx.user.create({
+          data: {
+            email: userData.email,
+            password: hashedPassword,
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            organizationId: organizationId,
+            language: userData.language || 'en',
+            employeeId: userData.employeeId
+          }
+        })
+        
+        // Assign roles if provided
+        if (userData.roleIds?.length > 0) {
+          await tx.userRole.createMany({
+            data: userData.roleIds.map(roleId => ({
+              userId: user.id,
+              roleId
+            }))
+          })
+        } else {
+          // Assign default user role
+          const defaultRole = await tx.role.findFirst({
+            where: {
+              organizationId: organizationId,
+              isDefault: true,
+              name: 'user'
+            }
+          })
+          
+          if (defaultRole) {
+            await tx.userRole.create({
+              data: {
+                userId: user.id,
+                roleId: defaultRole.id
+              }
+            })
+          }
+        }
+        
+        // Fetch user with roles
+        return await tx.user.findUnique({
+          where: { id: user.id },
+          include: {
+            userRoles: {
+              include: {
+                role: {
+                  select: {
+                    id: true,
+                    name: true,
+                    description: true
+                  }
+                }
+              }
+            }
+          }
+        })
+      })
+      
+      // Remove password from response
+      const { password: _, ...userResponse } = result
+      
+      return createLocalizedSuccess('user.user_created', language, {
+        user: userResponse
+      })
+      
+    } catch (error) {
+      if (error.statusCode) {
+        throw error
+      }
+      console.error('Create user error:', error)
+      throw createLocalizedError('error.internal_server_error', language, 500)
+    }
+  }
+
+  /**
+   * Update a user
+   * @param {string} userId - User ID
+   * @param {Object} updateData - Update data
+   * @param {string} organizationId - Organization ID
+   * @param {string} language - Language for response
+   * @returns {Object} Updated user
+   */
+  static async updateUser(userId, updateData, organizationId, language = 'en') {
+    try {
+      // Check if user exists in organization
+      const existingUser = await prisma.user.findUnique({
+        where: { 
+          id: userId,
+          organizationId: organizationId
+        }
+      })
+      
+      if (!existingUser) {
+        throw createLocalizedError('user.user_not_found', language, 404)
+      }
+      
+      // Validate role IDs if provided
+      if (updateData.roleIds?.length > 0) {
+        const roles = await prisma.role.findMany({
+          where: {
+            id: { in: updateData.roleIds },
+            organizationId: organizationId
+          }
+        })
+        
+        if (roles.length !== updateData.roleIds.length) {
+          throw createLocalizedError('role.role_not_found', language, 404)
+        }
+      }
+      
+      // Update user with roles in transaction
+      const result = await prisma.$transaction(async (tx) => {
+        // Update user
+        const { roleIds, ...userUpdateData } = updateData
+        const updatedUser = await tx.user.update({
+          where: { id: userId },
+          data: {
+            ...userUpdateData,
+            updatedAt: new Date()
+          }
+        })
+        
+        // Update roles if provided
+        if (roleIds !== undefined) {
+          // Remove existing role assignments
+          await tx.userRole.deleteMany({
+            where: { userId: userId }
+          })
+          
+          // Add new role assignments
+          if (roleIds.length > 0) {
+            await tx.userRole.createMany({
+              data: roleIds.map(roleId => ({
+                userId: userId,
+                roleId
+              }))
+            })
+          }
+        }
+        
+        // If user is deactivated, revoke all refresh tokens
+        if (userUpdateData.isActive === false) {
+          await tx.refreshToken.deleteMany({
+            where: { userId: userId }
+          })
+        }
+        
+        // Return updated user with roles
+        return await tx.user.findUnique({
+          where: { id: userId },
+          include: {
+            userRoles: {
+              include: {
+                role: {
+                  select: {
+                    id: true,
+                    name: true,
+                    description: true
+                  }
+                }
+              }
+            }
+          }
+        })
+      })
+      
+      // Remove password from response
+      const { password: _, ...userResponse } = result
+      
+      return createLocalizedSuccess('user.user_updated', language, {
+        user: userResponse
+      })
+      
+    } catch (error) {
+      if (error.statusCode) {
+        throw error
+      }
+      console.error('Update user error:', error)
+      throw createLocalizedError('error.internal_server_error', language, 500)
+    }
+  }
+
+  /**
    * Get all system users with advanced filtering
    * @param {Object} options - Query options
    * @param {string} language - Language for response
@@ -523,7 +744,7 @@ export class AdminService {
       const where = {}
       
       if (organizationId) {
-        where.organisationId = organizationId
+        where.organizationId = organizationId
       }
       
       if (userId) {

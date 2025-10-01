@@ -114,7 +114,6 @@ export class OrganizationService {
               select: {
                 users: true,
                 divisions: true,
-                departments: true,
                 roles: true
               }
             }
@@ -177,7 +176,6 @@ export class OrganizationService {
             select: {
               users: true,
               divisions: true,
-              departments: true,
               roles: true
             }
           }
@@ -243,7 +241,6 @@ export class OrganizationService {
             select: {
               users: true,
               divisions: true,
-              departments: true,
               roles: true
             }
           }

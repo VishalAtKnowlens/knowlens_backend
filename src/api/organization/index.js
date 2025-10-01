@@ -1,8 +1,9 @@
 import { prisma } from '../../config/database.js'
-import { validateSchema, updateOrganisationSchema, createRoleSchema, updateRoleSchema } from '../../utils/validation.js'
+import { validateSchema, updateOrganizationSchema, createRoleSchema, updateRoleSchema, createOrganizationSchema } from '../../utils/validation.js'
 import { authenticate, enforceOrganizationScope, requirePermissions } from '../../middleware/auth.js'
 import { detectLanguage } from '../../middleware/language.js'
 import { createLocalizedSuccess, createLocalizedError } from '../../config/i18n.js'
+import { OrganizationService } from '../../services/organization.js'
 
 /**
  * Organization routes plugin
@@ -14,6 +15,156 @@ export default async function organizationRoutes(fastify) {
   fastify.addHook('preHandler', authenticate)
   fastify.addHook('preHandler', enforceOrganizationScope)
   
+  /**
+   * POST /api/organization
+   * Create a new organization
+   */
+  fastify.post('/', {
+    preHandler: [requirePermissions(['super_admin'])],
+    schema: {
+      description: 'Create a new organization',
+      tags: ['Organization'],
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        required: ['name', 'slug'],
+        properties: {
+          name: { type: 'string', minLength: 1, maxLength: 200 },
+          slug: { type: 'string', minLength: 3, maxLength: 50 },
+          logoUrl: { type: 'string', format: 'uri' },
+          language: { type: 'string', enum: ['en', 'es', 'fr'] }
+        }
+      },
+      response: {
+        201: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' },
+            data: {
+              type: 'object',
+              properties: {
+                organization: { type: 'object' }
+              }
+            }
+          }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const result = await OrganizationService.create(request.body, request.language)
+      return reply.code(201).send(result)
+      
+    } catch (error) {
+      if (error.statusCode) {
+        throw error
+      }
+      console.error('Create organization error:', error)
+      throw createLocalizedError('error.internal_server_error', request.language, 500)
+    }
+  })
+
+  /**
+   * GET /api/organization
+   * Get all organizations
+   */
+  fastify.get('/', {
+    preHandler: [requirePermissions(['super_admin'])],
+    schema: {
+      description: 'Get all organizations',
+      tags: ['Organization'],
+      security: [{ bearerAuth: [] }],
+      querystring: {
+        type: 'object',
+        properties: {
+          page: { type: 'integer', minimum: 1, default: 1 },
+          limit: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+          search: { type: 'string' },
+          status: { type: 'string', enum: ['ACTIVE', 'INACTIVE'] },
+          sortBy: { type: 'string', default: 'createdAt' },
+          sortOrder: { type: 'string', enum: ['asc', 'desc'], default: 'desc' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' },
+            data: {
+              type: 'object',
+              properties: {
+                organizations: { type: 'array' },
+                pagination: { type: 'object' }
+              }
+            }
+          }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const result = await OrganizationService.findAll(request.query, request.language)
+      return reply.send(result)
+      
+    } catch (error) {
+      if (error.statusCode) {
+        throw error
+      }
+      console.error('Get organizations error:', error)
+      throw createLocalizedError('error.internal_server_error', request.language, 500)
+    }
+  })
+
+  /**
+   * GET /api/organization/:id
+   * Get organization by ID
+   */
+  fastify.get('/:id', {
+    preHandler: [requirePermissions(['super_admin', 'organization_read'])],
+    schema: {
+      description: 'Get organization by ID',
+      tags: ['Organization'],
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        required: ['id'],
+        properties: {
+          id: { type: 'string' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' },
+            data: {
+              type: 'object',
+              properties: {
+                organization: { type: 'object' }
+              }
+            }
+          }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const { id } = request.params
+      const result = await OrganizationService.findById(id, request.language)
+      return reply.send(result)
+      
+    } catch (error) {
+      if (error.statusCode) {
+        throw error
+      }
+      console.error('Get organization error:', error)
+      throw createLocalizedError('error.internal_server_error', request.language, 500)
+    }
+  })
+
   /**
    * GET /api/organization/settings
    * Get organization settings
@@ -33,7 +184,7 @@ export default async function organizationRoutes(fastify) {
             data: {
               type: 'object',
               properties: {
-                organisation: {
+                organization: {
                   type: 'object',
                   properties: {
                     id: { type: 'string' },
@@ -54,21 +205,8 @@ export default async function organizationRoutes(fastify) {
     }
   }, async (request, reply) => {
     try {
-      const organisation = await prisma.organisation.findUnique({
-        where: { 
-          id: request.organizationId 
-        }
-      })
-      
-      if (!organisation) {
-        throw createLocalizedError('organization.organization_not_found', request.language, 404)
-      }
-      
-      return reply.send(
-        createLocalizedSuccess('success.data_retrieved', request.language, {
-          organisation
-        })
-      )
+      const result = await OrganizationService.findById(request.organizationId, request.language)
+      return reply.send(result)
       
     } catch (error) {
       if (error.statusCode) {
@@ -107,7 +245,7 @@ export default async function organizationRoutes(fastify) {
             data: {
               type: 'object',
               properties: {
-                organisation: { type: 'object' }
+                organization: { type: 'object' }
               }
             }
           }
@@ -116,23 +254,9 @@ export default async function organizationRoutes(fastify) {
     }
   }, async (request, reply) => {
     try {
-      const updateData = validateSchema(updateOrganisationSchema, request.body)
-      
-      const updatedOrganisation = await prisma.organisation.update({
-        where: { 
-          id: request.organizationId 
-        },
-        data: {
-          ...updateData,
-          updatedAt: new Date()
-        }
-      })
-      
-      return reply.send(
-        createLocalizedSuccess('organization.settings_updated', request.language, {
-          organisation: updatedOrganisation
-        })
-      )
+      const updateData = validateSchema(updateOrganizationSchema, request.body)
+      const result = await OrganizationService.update(request.organizationId, updateData, request.language)
+      return reply.send(result)
       
     } catch (error) {
       if (error.statusCode) {
@@ -188,7 +312,7 @@ export default async function organizationRoutes(fastify) {
     try {
       const roles = await prisma.role.findMany({
         where: { 
-          organisationId: request.organizationId 
+          organizationId: request.organizationId 
         },
         orderBy: {
           name: 'asc'
@@ -253,9 +377,9 @@ export default async function organizationRoutes(fastify) {
       // Check if role name already exists in organization
       const existingRole = await prisma.role.findUnique({
         where: {
-          name_organisationId: {
+          name_organizationId: {
             name: roleData.name,
-            organisationId: request.organizationId
+            organizationId: request.organizationId
           }
         }
       })
@@ -267,7 +391,7 @@ export default async function organizationRoutes(fastify) {
       const role = await prisma.role.create({
         data: {
           ...roleData,
-          organisationId: request.organizationId
+          organizationId: request.organizationId
         }
       })
       
@@ -327,7 +451,7 @@ export default async function organizationRoutes(fastify) {
       const role = await prisma.role.findUnique({
         where: { 
           id,
-          organisationId: request.organizationId
+          organizationId: request.organizationId
         },
         include: {
           userRoles: {
@@ -418,7 +542,7 @@ export default async function organizationRoutes(fastify) {
       const existingRole = await prisma.role.findUnique({
         where: { 
           id,
-          organisationId: request.organizationId
+          organizationId: request.organizationId
         }
       })
       
@@ -430,9 +554,9 @@ export default async function organizationRoutes(fastify) {
       if (updateData.name && updateData.name !== existingRole.name) {
         const nameConflict = await prisma.role.findUnique({
           where: {
-            name_organisationId: {
+            name_organizationId: {
               name: updateData.name,
-              organisationId: request.organizationId
+              organizationId: request.organizationId
             }
           }
         })
@@ -501,7 +625,7 @@ export default async function organizationRoutes(fastify) {
       const existingRole = await prisma.role.findUnique({
         where: { 
           id,
-          organisationId: request.organizationId
+          organizationId: request.organizationId
         }
       })
       
@@ -585,20 +709,20 @@ export default async function organizationRoutes(fastify) {
       // Run all queries in parallel
       const [totalUsers, activeUsers, totalRoles, recentLogins] = await Promise.all([
         prisma.user.count({
-          where: { organisationId: request.organizationId }
+          where: { organizationId: request.organizationId }
         }),
         prisma.user.count({
           where: { 
-            organisationId: request.organizationId,
+            organizationId: request.organizationId,
             isActive: true
           }
         }),
         prisma.role.count({
-          where: { organisationId: request.organizationId }
+          where: { organizationId: request.organizationId }
         }),
         prisma.user.count({
           where: {
-            organisationId: request.organizationId,
+            organizationId: request.organizationId,
             lastLoginAt: {
               gte: thirtyDaysAgo
             }
@@ -621,6 +745,160 @@ export default async function organizationRoutes(fastify) {
       
     } catch (error) {
       console.error('Get organization stats error:', error)
+      throw createLocalizedError('error.internal_server_error', request.language, 500)
+    }
+  })
+
+  /**
+   * PUT /api/organization/:id
+   * Update organization by ID
+   */
+  fastify.put('/:id', {
+    preHandler: [requirePermissions(['super_admin', 'organization_write'])],
+    schema: {
+      description: 'Update organization by ID',
+      tags: ['Organization'],
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        required: ['id'],
+        properties: {
+          id: { type: 'string' }
+        }
+      },
+      body: {
+        type: 'object',
+        properties: {
+          name: { type: 'string', minLength: 1, maxLength: 200 },
+          logoUrl: { type: 'string', format: 'uri' },
+          language: { type: 'string', enum: ['en', 'es', 'fr'] }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' },
+            data: {
+              type: 'object',
+              properties: {
+                organization: { type: 'object' }
+              }
+            }
+          }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const { id } = request.params
+      const result = await OrganizationService.update(id, request.body, request.language)
+      return reply.send(result)
+      
+    } catch (error) {
+      if (error.statusCode) {
+        throw error
+      }
+      console.error('Update organization error:', error)
+      throw createLocalizedError('error.internal_server_error', request.language, 500)
+    }
+  })
+
+  /**
+   * DELETE /api/organization/:id
+   * Delete organization by ID
+   */
+  fastify.delete('/:id', {
+    preHandler: [requirePermissions(['super_admin'])],
+    schema: {
+      description: 'Delete organization by ID',
+      tags: ['Organization'],
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        required: ['id'],
+        properties: {
+          id: { type: 'string' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' }
+          }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const { id } = request.params
+      const result = await OrganizationService.delete(id, request.language)
+      return reply.send(result)
+      
+    } catch (error) {
+      if (error.statusCode) {
+        throw error
+      }
+      console.error('Delete organization error:', error)
+      throw createLocalizedError('error.internal_server_error', request.language, 500)
+    }
+  })
+
+  /**
+   * POST /api/organization/:id/divisions
+   * Create a division in organization
+   */
+  fastify.post('/:id/divisions', {
+    preHandler: [requirePermissions(['admin', 'organization_write'])],
+    schema: {
+      description: 'Create a division in organization',
+      tags: ['Organization'],
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        required: ['id'],
+        properties: {
+          id: { type: 'string' }
+        }
+      },
+      body: {
+        type: 'object',
+        required: ['name'],
+        properties: {
+          name: { type: 'string', minLength: 1, maxLength: 100 },
+          shortName: { type: 'string', maxLength: 10 }
+        }
+      },
+      response: {
+        201: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' },
+            data: {
+              type: 'object',
+              properties: {
+                division: { type: 'object' }
+              }
+            }
+          }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const { id } = request.params
+      const result = await OrganizationService.createDivision(id, request.body, request.language)
+      return reply.code(201).send(result)
+      
+    } catch (error) {
+      if (error.statusCode) {
+        throw error
+      }
+      console.error('Create division error:', error)
       throw createLocalizedError('error.internal_server_error', request.language, 500)
     }
   })

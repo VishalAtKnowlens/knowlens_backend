@@ -21,7 +21,7 @@ export const registerSchema = z.object({
   password: passwordSchema,
   firstName: z.string().min(1, 'First name is required').max(100, 'First name too long'),
   lastName: z.string().min(1, 'Last name is required').max(100, 'Last name too long'),
-  organisationId: uuidSchema,
+  organizationId: uuidSchema,
   language: languageSchema.optional()
 })
 
@@ -49,7 +49,7 @@ export const userSchema = z.object({
   password: passwordSchema,
   firstName: z.string().min(1, 'First name is required').max(100, 'First name too long'),
   lastName: z.string().min(1, 'Last name is required').max(100, 'Last name too long'),
-  organisationId: z.string().min(1, 'Organization ID is required'),
+  organizationId: z.string().min(1, 'Organization ID is required'),
   language: languageSchema.optional(),
   employeeId: z.string().max(50, 'Employee ID too long').optional(),
   roleIds: z.array(z.string()).optional()
@@ -67,7 +67,7 @@ export const adminUpdateUserSchema = z.object({
 })
 
 // Organization schemas
-export const createOrganisationSchema = z.object({
+export const createOrganizationSchema = z.object({
   name: z.string().min(1, 'Organization name is required').max(200, 'Organization name too long'),
   slug: z.string()
     .min(3, 'Slug must be at least 3 characters')
@@ -77,7 +77,7 @@ export const createOrganisationSchema = z.object({
   language: languageSchema.optional()
 })
 
-export const updateOrganisationSchema = z.object({
+export const updateOrganizationSchema = z.object({
   name: z.string().min(1, 'Organization name is required').max(200, 'Organization name too long').optional(),
   logoUrl: z.string().url('Invalid URL format').optional(),
   language: languageSchema.optional()

@@ -22,13 +22,13 @@ export default async function authRoutes(fastify) {
       tags: ['Authentication'],
       body: {
         type: 'object',
-        required: ['email', 'password', 'firstName', 'lastName', 'organisationId'],
+        required: ['email', 'password', 'firstName', 'lastName', 'organizationId'],
         properties: {
           email: { type: 'string', format: 'email' },
           password: { type: 'string', minLength: 8 },
           firstName: { type: 'string', minLength: 1, maxLength: 100 },
           lastName: { type: 'string', minLength: 1, maxLength: 100 },
-          organisationId: { type: 'string', format: 'uuid' },
+          organizationId: { type: 'string', format: 'uuid' },
           language: { type: 'string', enum: ['en', 'es', 'fr'] }
         }
       },
@@ -48,7 +48,7 @@ export default async function authRoutes(fastify) {
                     email: { type: 'string' },
                     firstName: { type: 'string' },
                     lastName: { type: 'string' },
-                    organisationId: { type: 'string' },
+                    organizationId: { type: 'string' },
                     language: { type: 'string' },
                     isActive: { type: 'boolean' },
                     createdAt: { type: 'string', format: 'date-time' }
@@ -161,8 +161,8 @@ export default async function authRoutes(fastify) {
                     employeeId: { type: 'string' },
                     isActive: { type: 'boolean' },
                     emailVerified: { type: 'boolean' },
-                    organisationId: { type: 'string' },
-                    organisation: {
+                    organizationId: { type: 'string' },
+                    organization: {
                       type: 'object',
                       additionalProperties: true
                     },
