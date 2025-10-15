@@ -109,7 +109,7 @@ export const createUserSchema = z.object({
   lastName: z.string().min(1, 'Last name is required').max(100, 'Last name too long'),
   language: languageSchema.optional(),
   employeeId: z.string().max(50, 'Employee ID too long').optional(),
-  roleIds: z.array(z.string()).optional()
+  roleIds: z.array(z.coerce.number().int().positive()).optional()
 })
 
 export const updateUserSchema = z.object({
@@ -118,7 +118,7 @@ export const updateUserSchema = z.object({
   language: languageSchema.optional(),
   employeeId: z.string().max(50, 'Employee ID too long').optional(),
   isActive: z.boolean().optional(),
-  roleIds: z.array(z.string()).optional()
+  roleIds: z.array(z.coerce.number().int().positive()).optional()
 })
 
 // Pagination schemas

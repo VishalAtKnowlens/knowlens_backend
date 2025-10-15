@@ -64,11 +64,12 @@ async function main() {
 
   console.log("✅ Created departments")
 
-  // Create roles
+  // Create roles with permissions
   const adminRole = await prisma.role.create({
     data: {
       name: "Administrator",
       organizationId: organization.id,
+      permissions: ["admin", "user_management", "user_read", "user_write", "*"],
     },
   })
 
@@ -76,6 +77,7 @@ async function main() {
     data: {
       name: "Instructor",
       organizationId: organization.id,
+      permissions: ["user_read", "course_read", "course_write"],
     },
   })
 
@@ -83,10 +85,11 @@ async function main() {
     data: {
       name: "Learner",
       organizationId: organization.id,
+      permissions: ["user_read", "course_read"],
     },
   })
 
-  console.log("✅ Created roles")
+  console.log("✅ Created roles with permissions")
 
   // Create org levels and designations
   const seniorLevel = await prisma.orgLevel.create({

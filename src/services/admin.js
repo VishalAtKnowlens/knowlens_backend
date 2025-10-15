@@ -1,9 +1,9 @@
 import { prisma } from '../config/database.js'
 import { hashPassword } from '../utils/password.js'
 import bcrypt from 'bcrypt'
-import { 
+import {
   createLocalizedError,
-  createLocalizedSuccess 
+  createLocalizedSuccess
 } from '../config/i18n.js'
 
 /**
@@ -125,11 +125,11 @@ export class AdminService {
    */
   static async createSystemAdmin(adminData, language = 'en') {
     try {
-      const { 
-        email, 
-        password, 
-        firstName, 
-        lastName, 
+      const {
+        email,
+        password,
+        firstName,
+        lastName,
         organizationId,
         username
       } = adminData
@@ -138,7 +138,7 @@ export class AdminService {
       const existingUser = await prisma.user.findUnique({
         where: { email }
       })
-      
+
       if (existingUser) {
         throw createLocalizedError('auth.email_already_exists', language, 409)
       }
@@ -148,7 +148,7 @@ export class AdminService {
         const existingUsername = await prisma.user.findUnique({
           where: { username }
         })
-        
+
         if (existingUsername) {
           throw createLocalizedError('auth.username_already_exists', language, 409)
         }
@@ -253,7 +253,7 @@ export class AdminService {
       if (error.statusCode) {
         throw error
       }
-      
+
       console.error('Create system admin error:', error)
       throw createLocalizedError('error.internal_server_error', language, 500)
     }
@@ -272,11 +272,11 @@ export class AdminService {
       const existingUser = await prisma.user.findUnique({
         where: { email: userData.email }
       })
-      
+
       if (existingUser) {
         throw createLocalizedError('auth.email_already_exists', language, 409)
       }
-      
+
       // Validate role IDs if provided
       if (userData.roleIds?.length > 0) {
         const roles = await prisma.role.findMany({
@@ -285,15 +285,15 @@ export class AdminService {
             organizationId: organizationId
           }
         })
-        
+
         if (roles.length !== userData.roleIds.length) {
           throw createLocalizedError('role.role_not_found', language, 404)
         }
       }
-      
+
       // Hash password
       const hashedPassword = await hashPassword(userData.password)
-      
+
       // Create user with roles in transaction
       const result = await prisma.$transaction(async (tx) => {
         // Create user
@@ -308,7 +308,7 @@ export class AdminService {
             employeeId: userData.employeeId
           }
         })
-        
+
         // Assign roles if provided
         if (userData.roleIds?.length > 0) {
           await tx.userRole.createMany({
@@ -326,7 +326,7 @@ export class AdminService {
               name: 'user'
             }
           })
-          
+
           if (defaultRole) {
             await tx.userRole.create({
               data: {
@@ -336,7 +336,7 @@ export class AdminService {
             })
           }
         }
-        
+
         // Fetch user with roles
         return await tx.user.findUnique({
           where: { id: user.id },
@@ -355,14 +355,14 @@ export class AdminService {
           }
         })
       })
-      
+
       // Remove password from response
       const { password: _, ...userResponse } = result
-      
+
       return createLocalizedSuccess('user.user_created', language, {
         user: userResponse
       })
-      
+
     } catch (error) {
       if (error.statusCode) {
         throw error
@@ -382,18 +382,21 @@ export class AdminService {
    */
   static async updateUser(userId, updateData, organizationId, language = 'en') {
     try {
+      // Convert userId to integer if it's a string
+      const userIdInt = typeof userId === 'string' ? parseInt(userId, 10) : userId
+
       // Check if user exists in organization
       const existingUser = await prisma.user.findUnique({
-        where: { 
-          id: userId,
+        where: {
+          id: userIdInt,
           organizationId: organizationId
         }
       })
-      
+
       if (!existingUser) {
         throw createLocalizedError('user.user_not_found', language, 404)
       }
-      
+
       // Validate role IDs if provided
       if (updateData.roleIds?.length > 0) {
         const roles = await prisma.role.findMany({
@@ -402,52 +405,52 @@ export class AdminService {
             organizationId: organizationId
           }
         })
-        
+
         if (roles.length !== updateData.roleIds.length) {
           throw createLocalizedError('role.role_not_found', language, 404)
         }
       }
-      
+
       // Update user with roles in transaction
       const result = await prisma.$transaction(async (tx) => {
         // Update user
         const { roleIds, ...userUpdateData } = updateData
         const updatedUser = await tx.user.update({
-          where: { id: userId },
+          where: { id: userIdInt },
           data: {
             ...userUpdateData,
             updatedAt: new Date()
           }
         })
-        
+
         // Update roles if provided
         if (roleIds !== undefined) {
           // Remove existing role assignments
           await tx.userRole.deleteMany({
-            where: { userId: userId }
+            where: { userId: userIdInt }
           })
-          
+
           // Add new role assignments
           if (roleIds.length > 0) {
             await tx.userRole.createMany({
               data: roleIds.map(roleId => ({
-                userId: userId,
+                userId: userIdInt,
                 roleId
               }))
             })
           }
         }
-        
+
         // If user is deactivated, revoke all refresh tokens
         if (userUpdateData.isActive === false) {
           await tx.refreshToken.deleteMany({
-            where: { userId: userId }
+            where: { userId: userIdInt }
           })
         }
-        
+
         // Return updated user with roles
         return await tx.user.findUnique({
-          where: { id: userId },
+          where: { id: userIdInt },
           include: {
             userRoles: {
               include: {
@@ -463,14 +466,14 @@ export class AdminService {
           }
         })
       })
-      
+
       // Remove password from response
       const { password: _, ...userResponse } = result
-      
+
       return createLocalizedSuccess('user.user_updated', language, {
         user: userResponse
       })
-      
+
     } catch (error) {
       if (error.statusCode) {
         throw error
@@ -498,17 +501,17 @@ export class AdminService {
         sortBy = 'createdAt',
         sortOrder = 'desc'
       } = options
-      
+
       const skip = (page - 1) * limit
       const take = Math.min(limit, 100)
-      
+
       // Build where clause
       const where = {}
-      
+
       if (organizationId) {
         where.organizationId = organizationId
       }
-      
+
       if (status) {
         where.status = status
       }
@@ -516,7 +519,7 @@ export class AdminService {
       if (type) {
         where.type = type
       }
-      
+
       if (search) {
         where.OR = [
           { firstName: { contains: search, mode: 'insensitive' } },
@@ -526,7 +529,7 @@ export class AdminService {
           { employeeId: { contains: search, mode: 'insensitive' } }
         ]
       }
-      
+
       // Get users with pagination
       const [users, total] = await Promise.all([
         prisma.user.findMany({
@@ -536,6 +539,7 @@ export class AdminService {
           orderBy: { [sortBy]: sortOrder },
           select: {
             id: true,
+            uuid: true,
             username: true,
             email: true,
             firstName: true,
@@ -567,9 +571,9 @@ export class AdminService {
         }),
         prisma.user.count({ where })
       ])
-      
+
       const totalPages = Math.ceil(total / take)
-      
+
       return createLocalizedSuccess('success.data_retrieved', language, {
         users,
         pagination: {
@@ -581,7 +585,7 @@ export class AdminService {
           hasPrevPage: page > 1
         }
       })
-      
+
     } catch (error) {
       console.error('Get all users error:', error)
       throw createLocalizedError('error.internal_server_error', language, 500)
@@ -710,7 +714,7 @@ export class AdminService {
       if (error.statusCode) {
         throw error
       }
-      
+
       console.error('Manage user roles error:', error)
       throw createLocalizedError('error.internal_server_error', language, 500)
     }
@@ -736,17 +740,17 @@ export class AdminService {
         sortBy = 'createdAt',
         sortOrder = 'desc'
       } = options
-      
+
       const skip = (page - 1) * limit
       const take = Math.min(limit, 100)
-      
+
       // Build where clause
       const where = {}
-      
+
       if (organizationId) {
         where.organizationId = organizationId
       }
-      
+
       if (userId) {
         where.userId = userId
       }
@@ -764,7 +768,7 @@ export class AdminService {
         if (startDate) where.createdAt.gte = new Date(startDate)
         if (endDate) where.createdAt.lte = new Date(endDate)
       }
-      
+
       // Get audit logs with pagination
       const [logs, total] = await Promise.all([
         prisma.auditLog.findMany({
@@ -775,9 +779,9 @@ export class AdminService {
         }),
         prisma.auditLog.count({ where })
       ])
-      
+
       const totalPages = Math.ceil(total / take)
-      
+
       return createLocalizedSuccess('success.data_retrieved', language, {
         logs,
         pagination: {
@@ -789,7 +793,7 @@ export class AdminService {
           hasPrevPage: page > 1
         }
       })
-      
+
     } catch (error) {
       console.error('Get audit logs error:', error)
       throw createLocalizedError('error.internal_server_error', language, 500)
@@ -839,13 +843,13 @@ export class AdminService {
           if (!data.roleId) {
             throw createLocalizedError('admin.role_required', language, 400)
           }
-          
+
           // Remove existing roles and assign new one
           await prisma.$transaction(async (tx) => {
             await tx.userRole.deleteMany({
               where: { userId: { in: userIds } }
             })
-            
+
             await tx.userRole.createMany({
               data: userIds.map(userId => ({
                 userId,
@@ -853,7 +857,7 @@ export class AdminService {
               }))
             })
           })
-          
+
           results = { count: userIds.length }
           break
 
@@ -871,7 +875,7 @@ export class AdminService {
       if (error.statusCode) {
         throw error
       }
-      
+
       console.error('Bulk user operations error:', error)
       throw createLocalizedError('error.internal_server_error', language, 500)
     }
@@ -928,7 +932,7 @@ export class AdminService {
 
     } catch (error) {
       console.error('Get system health error:', error)
-      
+
       return createLocalizedSuccess('success.data_retrieved', language, {
         health: {
           database: { status: 'unhealthy', connected: false },

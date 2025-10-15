@@ -139,6 +139,37 @@ export default async function userRoutes(fastify) {
   })
 
   /**
+   * GET /api/user/debug
+   * Debug endpoint to check current user's permissions
+   */
+  fastify.get('/debug', {
+    schema: {
+      description: 'Debug current user permissions',
+      tags: ['User'],
+      security: [{ bearerAuth: [] }]
+    }
+  }, async (request, reply) => {
+    try {
+      return reply.send({
+        success: true,
+        data: {
+          userId: request.user.id,
+          email: request.user.email,
+          userPermissions: request.userPermissions,
+          roles: request.user.userRoles?.map(ur => ({
+            id: ur.role?.id,
+            name: ur.role?.name,
+            permissions: ur.role?.permissions
+          }))
+        }
+      })
+    } catch (error) {
+      console.error('Debug error:', error)
+      throw createLocalizedError('error.internal_server_error', request.language, 500)
+    }
+  })
+
+  /**
    * GET /api/user/permissions
    * Get current user's permissions
    */

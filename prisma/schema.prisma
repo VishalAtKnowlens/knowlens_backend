@@ -124,6 +124,7 @@ enum CronFrequency {
 
 model User {
   id                Int      @id @default(autoincrement())
+  uuid              String   @unique @default(uuid())
   employeeId        String?  @unique @map("emp_id")
   externalId        String?  @unique @map("uniqid")
   username          String   @unique
@@ -256,6 +257,8 @@ model Department {
 model Role {
   id              Int      @id @default(autoincrement())
   name            String
+  description     String?
+  permissions     String[] @default([])
   organizationId  Int
   organization    Organization @relation(fields: [organizationId], references: [id])
   createdAt       DateTime @default(now())
