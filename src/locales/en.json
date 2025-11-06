@@ -102,5 +102,110 @@
     "cancel": "Cancel",
     "confirm": "Confirm",
     "continue": "Continue"
+  },
+  "course": {
+    "course_created": "Course created successfully",
+    "course_updated": "Course updated successfully",
+    "course_deleted": "Course deleted successfully",
+    "course_not_found": "Course not found",
+    "slug_already_exists": "Course slug already exists"
+  },
+  "clip": {
+    "clip_created": "Clip created successfully",
+    "clip_updated": "Clip updated successfully",
+    "clip_deleted": "Clip deleted successfully",
+    "clip_not_found": "Clip not found"
+  },
+  "video": {
+    "video_created": "Video created successfully",
+    "video_updated": "Video updated successfully",
+    "video_deleted": "Video deleted successfully",
+    "video_not_found": "Video not found",
+    "source_added": "Video source added successfully",
+    "subtitle_added": "Video subtitle added successfully"
+  },
+  "document": {
+    "document_created": "Document created successfully",
+    "document_updated": "Document updated successfully",
+    "document_deleted": "Document deleted successfully",
+    "document_not_found": "Document not found",
+    "view_recorded": "Document view recorded successfully",
+    "view_updated": "Document view updated successfully"
+  },
+  "category": {
+    "category_created": "Category created successfully",
+    "category_updated": "Category updated successfully",
+    "category_deleted": "Category deleted successfully",
+    "category_not_found": "Category not found",
+    "name_already_exists": "Category name already exists",
+    "cannot_delete_with_courses": "Cannot delete category with linked courses",
+    "course_linked": "Course linked to category successfully",
+    "course_unlinked": "Course unlinked from category successfully",
+    "course_already_linked": "Course is already linked to this category",
+    "course_not_linked": "Course is not linked to this category"
+  },
+  "division": {
+    "not_found": "Division not found"
+  },
+  "department": {
+    "not_found": "Department not found",
+    "name_already_exists_in_division": "Department name already exists in this division",
+    "created_successfully": "Department created successfully",
+    "updated_successfully": "Department updated successfully",
+    "deleted_successfully": "Department deleted successfully",
+    "cannot_delete_with_users": "Cannot delete department with assigned users",
+    "cannot_delete_with_user_profiles": "Cannot delete department with user profiles"
+  },
+  "quiz": {
+    "quiz_created": "Quiz created successfully",
+    "quiz_updated": "Quiz updated successfully",
+    "quiz_deleted": "Quiz deleted successfully",
+    "quiz_not_found": "Quiz not found",
+    "max_attempts_reached": "Maximum attempts reached for this quiz",
+    "attempt_started": "Quiz attempt started successfully",
+    "attempt_not_found": "Quiz attempt not found",
+    "attempt_already_completed": "Quiz attempt already completed",
+    "answer_submitted": "Answer submitted successfully",
+    "attempt_completed": "Quiz attempt completed successfully",
+    "question_not_found": "Question not found"
+  },
+  "assignment": {
+    "assignment_created": "Assignment created successfully",
+    "assignment_updated": "Assignment updated successfully",
+    "assignment_deleted": "Assignment deleted successfully",
+    "assignment_not_found": "Assignment not found",
+    "assignment_not_published": "Assignment is not published",
+    "submission_created": "Assignment submitted successfully",
+    "submission_updated": "Assignment submission updated successfully",
+    "submission_not_found": "Assignment submission not found",
+    "submission_graded": "Assignment graded successfully"
+  },
+  "discussion": {
+    "discussion_created": "Discussion created successfully",
+    "discussion_updated": "Discussion updated successfully",
+    "discussion_deleted": "Discussion deleted successfully",
+    "discussion_not_found": "Discussion not found",
+    "discussion_not_published": "Discussion is not published",
+    "post_created": "Post created successfully",
+    "post_updated": "Post updated successfully",
+    "post_deleted": "Post deleted successfully",
+    "post_not_found": "Post not found",
+    "parent_post_not_found": "Parent post not found",
+    "cannot_delete_post_with_replies": "Cannot delete post with replies",
+    "post_liked": "Post liked successfully",
+    "post_unliked": "Post unliked successfully"
+  },
+  "enrollment": {
+    "enrollment_created": "Enrolled in course successfully",
+    "enrollment_reactivated": "Enrollment reactivated successfully",
+    "enrollment_not_found": "Enrollment not found",
+    "already_enrolled": "Already enrolled in this course",
+    "course_not_published": "Course is not published",
+    "progress_updated": "Progress updated successfully",
+    "unenrolled": "Unenrolled from course successfully"
+  },
+  "progress": {
+    "progress_updated": "Progress updated successfully",
+    "progress_not_found": "Progress record not found"
   }
 }

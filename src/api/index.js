@@ -5,6 +5,16 @@ import organizationRoutes from './organization/index.js'
 import divisionRoutes from './division/index.js'
 import departmentRoutes from './department/index.js'
 import roleAssignmentRoutes from './role-assignment/index.js'
+import courseRoutes from './course/index.js'
+import clipRoutes from './clip/index.js'
+import videoRoutes from './video/index.js'
+import documentRoutes from './document/index.js'
+import contentCategoryRoutes from './content-category/index.js'
+import quizRoutes from './quiz/index.js'
+import assignmentRoutes from './assignment/index.js'
+import discussionRoutes from './discussion/index.js'
+import courseEnrollmentRoutes from './course-enrollment/index.js'
+import clipProgressRoutes from './clip-progress/index.js'
 
 /**
  * Register all API routes
@@ -86,6 +96,22 @@ export default async function apiRoutes(fastify) {
   await fastify.register(divisionRoutes, { prefix: '/divisions' })
   await fastify.register(departmentRoutes, { prefix: '/departments' })
   await fastify.register(roleAssignmentRoutes, { prefix: '/role-assignments' })
+  
+  // Phase 1: Learning Content Management
+  await fastify.register(courseRoutes, { prefix: '/courses' })
+  await fastify.register(clipRoutes, { prefix: '/clips' })
+  await fastify.register(videoRoutes, { prefix: '/videos' })
+  await fastify.register(documentRoutes, { prefix: '/documents' })
+  await fastify.register(contentCategoryRoutes, { prefix: '/content-categories' })
+  
+  // Phase 2: Assessments & Interactions
+  await fastify.register(quizRoutes, { prefix: '/quizzes' })
+  await fastify.register(assignmentRoutes, { prefix: '/assignments' })
+  await fastify.register(discussionRoutes, { prefix: '/discussions' })
+  
+  // Phase 3: Progress Tracking & Enrollment
+  await fastify.register(courseEnrollmentRoutes, { prefix: '/enrollments' })
+  await fastify.register(clipProgressRoutes, { prefix: '/progress' })
   
   // 404 handler for API routes
   fastify.setNotFoundHandler((request, reply) => {

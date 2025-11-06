@@ -1,0 +1,941 @@
+{
+  "info": {
+    "name": "Learning Management System - Phase 1 APIs",
+    "description": "Complete API collection for Course, Clip, Video, Document, and Content Category management",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000/api",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Courses",
+      "item": [
+        {
+          "name": "Create Course",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Introduction to JavaScript\",\n  \"subtitle\": \"Learn JavaScript from scratch\",\n  \"synopsis\": \"A comprehensive course for beginners\",\n  \"description\": \"This course covers all the fundamentals of JavaScript programming\",\n  \"targetAudience\": \"Beginners with no programming experience\",\n  \"learningObjectives\": \"Understand variables, functions, and objects\",\n  \"skillsLearned\": \"JavaScript, ES6, DOM Manipulation\",\n  \"prerequisites\": \"Basic computer knowledge\",\n  \"thumbnailUrl\": \"https://example.com/thumbnail.jpg\",\n  \"durationInMinutes\": 300,\n  \"totalHours\": 5,\n  \"totalPoints\": 100,\n  \"slug\": \"intro-to-javascript\",\n  \"layout\": \"MULTI_CLIP\",\n  \"isPublished\": true,\n  \"showInCatalogue\": true,\n  \"status\": \"ACTIVE\",\n  \"categoryIds\": [1, 2],\n  \"organizationIds\": [1]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/courses",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "courses"
+              ]
+            },
+            "description": "Create a new course with all details"
+          }
+        },
+        {
+          "name": "Get All Courses",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/courses?page=1&limit=20&search=&status=ACTIVE&isPublished=true&sortBy=createdAt&sortOrder=desc",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "courses"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number"
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Items per page (max 100)"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search in name, subtitle, description, slug"
+                },
+                {
+                  "key": "status",
+                  "value": "ACTIVE",
+                  "description": "Filter by status: ACTIVE, INACTIVE, ARCHIVED, PENDING"
+                },
+                {
+                  "key": "isPublished",
+                  "value": "true",
+                  "description": "Filter by published status"
+                },
+                {
+                  "key": "layout",
+                  "value": "",
+                  "description": "Filter by layout: MULTI_CLIP, SINGLE_PAGE"
+                },
+                {
+                  "key": "categoryId",
+                  "value": "",
+                  "description": "Filter by category ID"
+                },
+                {
+                  "key": "organizationId",
+                  "value": "",
+                  "description": "Filter by organization ID"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "createdAt",
+                  "description": "Sort field"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc",
+                  "description": "Sort order: asc, desc"
+                }
+              ]
+            },
+            "description": "Get all courses with pagination and filtering"
+          }
+        },
+        {
+          "name": "Get Course by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/courses/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "courses",
+                "1"
+              ]
+            },
+            "description": "Get detailed course information including clips, assignments, quizzes, and related courses"
+          }
+        },
+        {
+          "name": "Update Course",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Advanced JavaScript\",\n  \"subtitle\": \"Master JavaScript concepts\",\n  \"durationInMinutes\": 400,\n  \"totalPoints\": 150,\n  \"isPublished\": true,\n  \"status\": \"ACTIVE\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/courses/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "courses",
+                "1"
+              ]
+            },
+            "description": "Update course details"
+          }
+        },
+        {
+          "name": "Delete Course",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/courses/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "courses",
+                "1"
+              ]
+            },
+            "description": "Soft delete a course (sets status to INACTIVE and isPublished to false)"
+          }
+        },
+        {
+          "name": "Get Course Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/courses/1/stats",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "courses",
+                "1",
+                "stats"
+              ]
+            },
+            "description": "Get course statistics including enrollments, completion rate, and average quiz scores"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Clips",
+      "item": [
+        {
+          "name": "Create Clip",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Introduction to Variables\",\n  \"description\": \"Learn about JavaScript variables\",\n  \"type\": \"VIDEO\",\n  \"sequence\": 1,\n  \"points\": 10,\n  \"durationInSeconds\": 600,\n  \"slug\": \"intro-to-variables\",\n  \"courseId\": 1,\n  \"status\": \"ACTIVE\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/clips",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "clips"
+              ]
+            },
+            "description": "Create a new clip within a course"
+          }
+        },
+        {
+          "name": "Get All Clips",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/clips?page=1&limit=20&courseId=1&type=VIDEO&status=ACTIVE&sortBy=sequence&sortOrder=asc",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "clips"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search in title, description, slug"
+                },
+                {
+                  "key": "courseId",
+                  "value": "1",
+                  "description": "Filter by course ID"
+                },
+                {
+                  "key": "type",
+                  "value": "VIDEO",
+                  "description": "Filter by type: VIDEO, TEXT, ASSIGNMENT, QUIZ, EXERCISE, DOCUMENT"
+                },
+                {
+                  "key": "status",
+                  "value": "ACTIVE"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "sequence"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "asc"
+                }
+              ]
+            },
+            "description": "Get all clips with pagination and filtering"
+          }
+        },
+        {
+          "name": "Get Clip by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/clips/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "clips",
+                "1"
+              ]
+            },
+            "description": "Get detailed clip information including content sequence, highlights, assignments, and quizzes"
+          }
+        },
+        {
+          "name": "Update Clip",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Advanced Variables\",\n  \"description\": \"Deep dive into JavaScript variables\",\n  \"points\": 15,\n  \"durationInSeconds\": 900\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/clips/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "clips",
+                "1"
+              ]
+            },
+            "description": "Update clip details"
+          }
+        },
+        {
+          "name": "Delete Clip",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/clips/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "clips",
+                "1"
+              ]
+            },
+            "description": "Soft delete a clip (sets status to INACTIVE)"
+          }
+        },
+        {
+          "name": "Get Clip Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/clips/1/stats",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "clips",
+                "1",
+                "stats"
+              ]
+            },
+            "description": "Get clip progress statistics including completion rate and average progress"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Videos",
+      "item": [
+        {
+          "name": "Create Video",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"JavaScript Basics Tutorial\",\n  \"description\": \"Complete tutorial on JavaScript basics\",\n  \"thumbnailUrl\": \"https://example.com/video-thumb.jpg\",\n  \"durationInSeconds\": 1200,\n  \"tags\": \"javascript, programming, tutorial\",\n  \"points\": 20,\n  \"isPublished\": true,\n  \"status\": \"ACTIVE\",\n  \"sources\": [\n    {\n      \"url\": \"https://example.com/video-720p.mp4\",\n      \"language\": \"en\",\n      \"format\": \"mp4\",\n      \"quality\": \"720p\",\n      \"sizeInMb\": 150\n    },\n    {\n      \"url\": \"https://example.com/video-1080p.mp4\",\n      \"language\": \"en\",\n      \"format\": \"mp4\",\n      \"quality\": \"1080p\",\n      \"sizeInMb\": 300\n    }\n  ],\n  \"subtitles\": [\n    {\n      \"language\": \"en\",\n      \"label\": \"English\",\n      \"url\": \"https://example.com/subtitles-en.vtt\"\n    },\n    {\n      \"language\": \"es\",\n      \"label\": \"Spanish\",\n      \"url\": \"https://example.com/subtitles-es.vtt\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/videos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "videos"
+              ]
+            },
+            "description": "Create a new video with sources and subtitles"
+          }
+        },
+        {
+          "name": "Get All Videos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/videos?page=1&limit=20&status=ACTIVE&isPublished=true&sortBy=createdAt&sortOrder=desc",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "videos"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search in title, description, tags"
+                },
+                {
+                  "key": "status",
+                  "value": "ACTIVE"
+                },
+                {
+                  "key": "isPublished",
+                  "value": "true"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "createdAt"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc"
+                }
+              ]
+            },
+            "description": "Get all videos with pagination and filtering"
+          }
+        },
+        {
+          "name": "Get Video by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/videos/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "videos",
+                "1"
+              ]
+            },
+            "description": "Get detailed video information including sources, subtitles, and linked quizzes"
+          }
+        },
+        {
+          "name": "Update Video",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Advanced JavaScript Tutorial\",\n  \"description\": \"Updated description\",\n  \"points\": 25,\n  \"isPublished\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/videos/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "videos",
+                "1"
+              ]
+            },
+            "description": "Update video details"
+          }
+        },
+        {
+          "name": "Delete Video",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/videos/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "videos",
+                "1"
+              ]
+            },
+            "description": "Soft delete a video (sets status to INACTIVE and isPublished to false)"
+          }
+        },
+        {
+          "name": "Add Video Source",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://example.com/video-4k.mp4\",\n  \"language\": \"en\",\n  \"format\": \"mp4\",\n  \"quality\": \"4K\",\n  \"sizeInMb\": 800\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/videos/1/sources",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "videos",
+                "1",
+                "sources"
+              ]
+            },
+            "description": "Add a new video source (different quality/format)"
+          }
+        },
+        {
+          "name": "Add Video Subtitle",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"language\": \"fr\",\n  \"label\": \"French\",\n  \"url\": \"https://example.com/subtitles-fr.vtt\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/videos/1/subtitles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "videos",
+                "1",
+                "subtitles"
+              ]
+            },
+            "description": "Add a new subtitle track to the video"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Documents",
+      "item": [
+        {
+          "name": "Create Document",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"JavaScript Cheat Sheet\",\n  \"url\": \"https://example.com/js-cheatsheet.pdf\",\n  \"requiresConsent\": false,\n  \"isPublished\": true,\n  \"status\": \"ACTIVE\",\n  \"translations\": [\n    {\n      \"language\": \"es\",\n      \"title\": \"Hoja de trucos de JavaScript\",\n      \"url\": \"https://example.com/js-cheatsheet-es.pdf\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/documents",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "documents"
+              ]
+            },
+            "description": "Create a new document with optional translations"
+          }
+        },
+        {
+          "name": "Get All Documents",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/documents?page=1&limit=20&status=ACTIVE&isPublished=true&requiresConsent=false&sortBy=createdAt&sortOrder=desc",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "documents"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search in title, url"
+                },
+                {
+                  "key": "status",
+                  "value": "ACTIVE"
+                },
+                {
+                  "key": "isPublished",
+                  "value": "true"
+                },
+                {
+                  "key": "requiresConsent",
+                  "value": "false"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "createdAt"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc"
+                }
+              ]
+            },
+            "description": "Get all documents with pagination and filtering"
+          }
+        },
+        {
+          "name": "Get Document by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/documents/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "documents",
+                "1"
+              ]
+            },
+            "description": "Get detailed document information including translations and recent views"
+          }
+        },
+        {
+          "name": "Update Document",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated JavaScript Cheat Sheet\",\n  \"url\": \"https://example.com/js-cheatsheet-v2.pdf\",\n  \"requiresConsent\": true,\n  \"isPublished\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/documents/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "documents",
+                "1"
+              ]
+            },
+            "description": "Update document details"
+          }
+        },
+        {
+          "name": "Delete Document",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/documents/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "documents",
+                "1"
+              ]
+            },
+            "description": "Soft delete a document (sets status to INACTIVE and isPublished to false)"
+          }
+        },
+        {
+          "name": "Record Document View",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/documents/1/view",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "documents",
+                "1",
+                "view"
+              ]
+            },
+            "description": "Record that the current user viewed this document"
+          }
+        },
+        {
+          "name": "Get Document Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/documents/1/stats",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "documents",
+                "1",
+                "stats"
+              ]
+            },
+            "description": "Get document statistics including total views, unique viewers, and recent views"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Content Categories",
+      "item": [
+        {
+          "name": "Create Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Programming\",\n  \"description\": \"Programming and software development courses\",\n  \"imageUrl\": \"https://example.com/category-programming.jpg\",\n  \"language\": \"en\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/content-categories",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "content-categories"
+              ]
+            },
+            "description": "Create a new content category"
+          }
+        },
+        {
+          "name": "Get All Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/content-categories?page=1&limit=20&categoryLanguage=en&sortBy=name&sortOrder=asc",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "content-categories"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search in name, description"
+                },
+                {
+                  "key": "categoryLanguage",
+                  "value": "en",
+                  "description": "Filter by language"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "name"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "asc"
+                }
+              ]
+            },
+            "description": "Get all content categories with pagination and filtering"
+          }
+        },
+        {
+          "name": "Get Category by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/content-categories/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "content-categories",
+                "1"
+              ]
+            },
+            "description": "Get detailed category information including linked courses"
+          }
+        },
+        {
+          "name": "Update Category",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Web Development\",\n  \"description\": \"Web development and design courses\",\n  \"imageUrl\": \"https://example.com/category-webdev.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/content-categories/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "content-categories",
+                "1"
+              ]
+            },
+            "description": "Update category details"
+          }
+        },
+        {
+          "name": "Delete Category",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/content-categories/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "content-categories",
+                "1"
+              ]
+            },
+            "description": "Delete a category (only if no courses are linked)"
+          }
+        },
+        {
+          "name": "Link Course to Category",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/content-categories/1/courses/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "content-categories",
+                "1",
+                "courses",
+                "1"
+              ]
+            },
+            "description": "Link a course to a category"
+          }
+        },
+        {
+          "name": "Unlink Course from Category",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/content-categories/1/courses/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "content-categories",
+                "1",
+                "courses",
+                "1"
+              ]
+            },
+            "description": "Unlink a course from a category"
+          }
+        }
+      ]
+    }
+  ]
+}

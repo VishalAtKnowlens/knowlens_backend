@@ -1,0 +1,449 @@
+{
+  "info": {
+    "name": "Learning Management System - Phase 2 APIs",
+    "description": "Complete API collection for Quiz, Assignment, and Discussion management",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000/api",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Quizzes",
+      "item": [
+        {
+          "name": "Create Quiz",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"JavaScript Basics Quiz\",\n  \"courseId\": 1,\n  \"weightage\": 20,\n  \"passThreshold\": 70,\n  \"maxAttempts\": 3,\n  \"timeLimitInMinutes\": 30,\n  \"showAnalysis\": true,\n  \"randomizeQuestions\": true,\n  \"isPublished\": true,\n  \"status\": \"ACTIVE\",\n  \"questions\": [\n    {\n      \"text\": \"What is a variable in JavaScript?\",\n      \"type\": \"MULTIPLE_CHOICE\",\n      \"points\": 10,\n      \"sequence\": 0,\n      \"options\": [\n        {\"text\": \"A container for storing data\", \"isCorrect\": true, \"sequence\": 0},\n        {\"text\": \"A function\", \"isCorrect\": false, \"sequence\": 1},\n        {\"text\": \"A loop\", \"isCorrect\": false, \"sequence\": 2}\n      ]\n    },\n    {\n      \"text\": \"Which keyword is used to declare a constant?\",\n      \"type\": \"MULTIPLE_CHOICE\",\n      \"points\": 10,\n      \"sequence\": 1,\n      \"options\": [\n        {\"text\": \"var\", \"isCorrect\": false, \"sequence\": 0},\n        {\"text\": \"let\", \"isCorrect\": false, \"sequence\": 1},\n        {\"text\": \"const\", \"isCorrect\": true, \"sequence\": 2}\n      ]\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/quizzes",
+              "host": ["{{base_url}}"],
+              "path": ["quizzes"]
+            }
+          }
+        },
+        {
+          "name": "Get All Quizzes",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/quizzes?page=1&limit=20&courseId=1&status=ACTIVE&isPublished=true",
+              "host": ["{{base_url}}"],
+              "path": ["quizzes"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "20"},
+                {"key": "search", "value": "", "description": "Search in title"},
+                {"key": "courseId", "value": "1", "description": "Filter by course"},
+                {"key": "clipId", "value": "", "description": "Filter by clip"},
+                {"key": "status", "value": "ACTIVE"},
+                {"key": "isPublished", "value": "true"},
+                {"key": "sortBy", "value": "createdAt"},
+                {"key": "sortOrder", "value": "desc"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Quiz by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/quizzes/1",
+              "host": ["{{base_url}}"],
+              "path": ["quizzes", "1"]
+            }
+          }
+        },
+        {
+          "name": "Update Quiz",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Advanced JavaScript Quiz\",\n  \"passThreshold\": 80,\n  \"maxAttempts\": 5,\n  \"isPublished\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/quizzes/1",
+              "host": ["{{base_url}}"],
+              "path": ["quizzes", "1"]
+            }
+          }
+        },
+        {
+          "name": "Delete Quiz",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/quizzes/1",
+              "host": ["{{base_url}}"],
+              "path": ["quizzes", "1"]
+            }
+          }
+        },
+        {
+          "name": "Start Quiz Attempt",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/quizzes/1/start",
+              "host": ["{{base_url}}"],
+              "path": ["quizzes", "1", "start"]
+            },
+            "description": "Start a new quiz attempt. Returns attemptId to use for submitting answers."
+          }
+        },
+        {
+          "name": "Submit Quiz Answer",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"questionId\": 1,\n  \"selectedOptionId\": 1,\n  \"responseText\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/quizzes/attempts/1/answer",
+              "host": ["{{base_url}}"],
+              "path": ["quizzes", "attempts", "1", "answer"]
+            },
+            "description": "Submit answer for a question. Can be called multiple times for different questions."
+          }
+        },
+        {
+          "name": "Complete Quiz Attempt",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/quizzes/attempts/1/complete",
+              "host": ["{{base_url}}"],
+              "path": ["quizzes", "attempts", "1", "complete"]
+            },
+            "description": "Complete the quiz attempt and calculate final score."
+          }
+        },
+        {
+          "name": "Get Quiz Statistics",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/quizzes/1/stats",
+              "host": ["{{base_url}}"],
+              "path": ["quizzes", "1", "stats"]
+            },
+            "description": "Get quiz statistics including pass rate and average score."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Assignments",
+      "item": [
+        {
+          "name": "Create Assignment",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Build a Calculator App\",\n  \"description\": \"Create a simple calculator application using JavaScript. Include basic operations: addition, subtraction, multiplication, and division.\",\n  \"courseId\": 1,\n  \"clipId\": 1,\n  \"isPublished\": true,\n  \"status\": \"ACTIVE\",\n  \"translations\": [\n    {\n      \"language\": \"es\",\n      \"title\": \"Construir una aplicación de calculadora\",\n      \"description\": \"Crea una aplicación de calculadora simple usando JavaScript.\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/assignments",
+              "host": ["{{base_url}}"],
+              "path": ["assignments"]
+            }
+          }
+        },
+        {
+          "name": "Get All Assignments",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/assignments?page=1&limit=20&courseId=1&status=ACTIVE&isPublished=true",
+              "host": ["{{base_url}}"],
+              "path": ["assignments"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "20"},
+                {"key": "search", "value": ""},
+                {"key": "courseId", "value": "1"},
+                {"key": "clipId", "value": ""},
+                {"key": "status", "value": "ACTIVE"},
+                {"key": "isPublished", "value": "true"},
+                {"key": "sortBy", "value": "createdAt"},
+                {"key": "sortOrder", "value": "desc"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Assignment by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/assignments/1",
+              "host": ["{{base_url}}"],
+              "path": ["assignments", "1"]
+            }
+          }
+        },
+        {
+          "name": "Update Assignment",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Build an Advanced Calculator\",\n  \"description\": \"Updated description with more requirements\",\n  \"isPublished\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/assignments/1",
+              "host": ["{{base_url}}"],
+              "path": ["assignments", "1"]
+            }
+          }
+        },
+        {
+          "name": "Delete Assignment",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/assignments/1",
+              "host": ["{{base_url}}"],
+              "path": ["assignments", "1"]
+            }
+          }
+        },
+        {
+          "name": "Submit Assignment",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"submittedUrl\": \"https://github.com/username/calculator-app\",\n  \"submittedText\": \"I've completed the calculator app with all basic operations. The code is well-documented and includes error handling.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/assignments/1/submit",
+              "host": ["{{base_url}}"],
+              "path": ["assignments", "1", "submit"]
+            },
+            "description": "Submit assignment. Can provide URL, text, or both."
+          }
+        },
+        {
+          "name": "Grade Assignment Submission",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"score\": 85,\n  \"comments\": \"Great work! Your calculator works well. Consider adding keyboard support and more advanced operations like square root and percentage.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/assignments/submissions/1/grade",
+              "host": ["{{base_url}}"],
+              "path": ["assignments", "submissions", "1", "grade"]
+            },
+            "description": "Grade a student's assignment submission."
+          }
+        },
+        {
+          "name": "Get Assignment Statistics",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/assignments/1/stats",
+              "host": ["{{base_url}}"],
+              "path": ["assignments", "1", "stats"]
+            },
+            "description": "Get assignment statistics including submission count and average score."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Discussions",
+      "item": [
+        {
+          "name": "Create Discussion",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"topic\": \"JavaScript Best Practices\",\n  \"description\": \"Share your favorite JavaScript tips, tricks, and best practices. Let's learn from each other!\",\n  \"contentType\": \"COURSE\",\n  \"contentId\": 1,\n  \"isPublished\": true,\n  \"status\": \"ACTIVE\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/discussions",
+              "host": ["{{base_url}}"],
+              "path": ["discussions"]
+            }
+          }
+        },
+        {
+          "name": "Get All Discussions",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/discussions?page=1&limit=20&contentType=COURSE&status=ACTIVE&isPublished=true",
+              "host": ["{{base_url}}"],
+              "path": ["discussions"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "20"},
+                {"key": "search", "value": ""},
+                {"key": "contentType", "value": "COURSE"},
+                {"key": "contentId", "value": ""},
+                {"key": "authorId", "value": ""},
+                {"key": "status", "value": "ACTIVE"},
+                {"key": "isPublished", "value": "true"},
+                {"key": "sortBy", "value": "createdAt"},
+                {"key": "sortOrder", "value": "desc"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Discussion by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/discussions/1",
+              "host": ["{{base_url}}"],
+              "path": ["discussions", "1"]
+            },
+            "description": "Get discussion with all posts and replies."
+          }
+        },
+        {
+          "name": "Update Discussion",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"topic\": \"Advanced JavaScript Best Practices\",\n  \"description\": \"Updated description\",\n  \"isPublished\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/discussions/1",
+              "host": ["{{base_url}}"],
+              "path": ["discussions", "1"]
+            }
+          }
+        },
+        {
+          "name": "Delete Discussion",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/discussions/1",
+              "host": ["{{base_url}}"],
+              "path": ["discussions", "1"]
+            }
+          }
+        },
+        {
+          "name": "Create Discussion Post",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Always use const and let instead of var. Const for values that won't change, let for values that will. This helps prevent bugs and makes your code more predictable.\",\n  \"parentId\": null\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/discussions/1/posts",
+              "host": ["{{base_url}}"],
+              "path": ["discussions", "1", "posts"]
+            },
+            "description": "Create a new post in the discussion. Leave parentId null for top-level posts."
+          }
+        },
+        {
+          "name": "Create Reply to Post",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Great tip! I'd also add that using const makes your intentions clear to other developers reading your code.\",\n  \"parentId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/discussions/1/posts",
+              "host": ["{{base_url}}"],
+              "path": ["discussions", "1", "posts"]
+            },
+            "description": "Reply to an existing post by providing parentId."
+          }
+        },
+        {
+          "name": "Update Discussion Post",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Updated post content with more details...\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/discussions/posts/1",
+              "host": ["{{base_url}}"],
+              "path": ["discussions", "posts", "1"]
+            }
+          }
+        },
+        {
+          "name": "Delete Discussion Post",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/discussions/posts/1",
+              "host": ["{{base_url}}"],
+              "path": ["discussions", "posts", "1"]
+            },
+            "description": "Delete a post. Cannot delete posts with replies."
+          }
+        },
+        {
+          "name": "Like Discussion Post",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/discussions/posts/1/like",
+              "host": ["{{base_url}}"],
+              "path": ["discussions", "posts", "1", "like"]
+            },
+            "description": "Like a post. Call again to unlike."
+          }
+        }
+      ]
+    }
+  ]
+}

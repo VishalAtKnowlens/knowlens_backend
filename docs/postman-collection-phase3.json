@@ -1,0 +1,582 @@
+{
+  "info": {
+    "name": "Learning Management System - Phase 3 APIs",
+    "description": "Complete API collection for Course Enrollment and Progress Tracking",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000/api",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "enrollment_id",
+      "value": "",
+      "type": "string",
+      "description": "Store enrollment ID from create response"
+    }
+  ],
+  "item": [
+    {
+      "name": "Course Enrollments",
+      "item": [
+        {
+          "name": "Enroll in Course",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.enrollment) {",
+                  "        pm.collectionVariables.set('enrollment_id', response.data.enrollment.id);",
+                  "        console.log('Enrollment ID saved:', response.data.enrollment.id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/enrollments/courses/1",
+              "host": ["{{base_url}}"],
+              "path": ["enrollments", "courses", "1"]
+            },
+            "description": "Enroll the current user in a course. Returns enrollment details and automatically saves enrollment_id for subsequent requests."
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Enrollments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/enrollments/my?page=1&limit=20&isCompleted=false&sortBy=enrolledAt&sortOrder=desc",
+              "host": ["{{base_url}}"],
+              "path": ["enrollments", "my"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number"
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Items per page (max 100)"
+                },
+                {
+                  "key": "isCompleted",
+                  "value": "false",
+                  "description": "Filter by completion status"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "enrolledAt",
+                  "description": "Sort field: enrolledAt, updatedAt, percentComplete"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc",
+                  "description": "Sort order: asc, desc"
+                }
+              ]
+            },
+            "description": "Get all courses the current user is enrolled in with pagination and filtering."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Course Enrollments (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/enrollments/courses/1?page=1&limit=20&isCompleted=false",
+              "host": ["{{base_url}}"],
+              "path": ["enrollments", "courses", "1"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "isCompleted",
+                  "value": "false",
+                  "description": "Filter by completion status"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "enrolledAt"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc"
+                }
+              ]
+            },
+            "description": "Admin endpoint to view all users enrolled in a specific course."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Enrollment by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/enrollments/{{enrollment_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["enrollments", "{{enrollment_id}}"]
+            },
+            "description": "Get detailed information about a specific enrollment."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Enrollment Progress",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"progressPercent\": 50,\n  \"pointsEarned\": 75,\n  \"isCompleted\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/enrollments/{{enrollment_id}}/progress",
+              "host": ["{{base_url}}"],
+              "path": ["enrollments", "{{enrollment_id}}", "progress"]
+            },
+            "description": "Update the progress of an enrollment. All fields are optional."
+          },
+          "response": []
+        },
+        {
+          "name": "Complete Enrollment",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"progressPercent\": 100,\n  \"pointsEarned\": 150,\n  \"isCompleted\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/enrollments/{{enrollment_id}}/progress",
+              "host": ["{{base_url}}"],
+              "path": ["enrollments", "{{enrollment_id}}", "progress"]
+            },
+            "description": "Mark an enrollment as completed with final progress and points."
+          },
+          "response": []
+        },
+        {
+          "name": "Unenroll from Course",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/enrollments/{{enrollment_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["enrollments", "{{enrollment_id}}"]
+            },
+            "description": "Remove enrollment from a course (hard delete)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Enrollment Statistics (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/enrollments/courses/1/stats",
+              "host": ["{{base_url}}"],
+              "path": ["enrollments", "courses", "1", "stats"]
+            },
+            "description": "Get enrollment statistics for a course including total enrollments, completion rate, and average progress."
+          },
+          "response": []
+        }
+      ],
+      "description": "Course enrollment management endpoints for enrolling users, tracking enrollment progress, and viewing enrollment statistics."
+    },
+    {
+      "name": "Clip Progress",
+      "item": [
+        {
+          "name": "Start Clip (Update Progress)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"progressPercent\": 0,\n  \"isCompleted\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/progress/clips/1",
+              "host": ["{{base_url}}"],
+              "path": ["progress", "clips", "1"]
+            },
+            "description": "Start watching a clip. Creates progress record if it doesn't exist."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Clip Progress (50%)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"progressPercent\": 50\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/progress/clips/1",
+              "host": ["{{base_url}}"],
+              "path": ["progress", "clips", "1"]
+            },
+            "description": "Update progress to 50% completion."
+          },
+          "response": []
+        },
+        {
+          "name": "Complete Clip",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"progressPercent\": 100,\n  \"isCompleted\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/progress/clips/1",
+              "host": ["{{base_url}}"],
+              "path": ["progress", "clips", "1"]
+            },
+            "description": "Mark clip as completed. Automatically sets progress to 100%."
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Progress (All Clips)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/progress/my?page=1&limit=20&courseId=1&isCompleted=false&sortBy=updatedAt&sortOrder=desc",
+              "host": ["{{base_url}}"],
+              "path": ["progress", "my"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "courseId",
+                  "value": "1",
+                  "description": "Filter by course ID"
+                },
+                {
+                  "key": "isCompleted",
+                  "value": "false",
+                  "description": "Filter by completion status"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "updatedAt"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc"
+                }
+              ]
+            },
+            "description": "Get all clip progress for the current user with optional course filter."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Clip Progress for All Users (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/progress/clips/1?page=1&limit=20&isCompleted=false",
+              "host": ["{{base_url}}"],
+              "path": ["progress", "clips", "1"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "isCompleted",
+                  "value": "false"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "updatedAt"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc"
+                }
+              ]
+            },
+            "description": "Admin endpoint to view all users' progress for a specific clip."
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Progress for Specific Clip",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/progress/clips/1/my",
+              "host": ["{{base_url}}"],
+              "path": ["progress", "clips", "1", "my"]
+            },
+            "description": "Get the current user's progress for a specific clip."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Clip Statistics (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/progress/clips/1/stats",
+              "host": ["{{base_url}}"],
+              "path": ["progress", "clips", "1", "stats"]
+            },
+            "description": "Get clip statistics including total users, completion rate, and average progress."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Course Progress Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/progress/courses/1/summary",
+              "host": ["{{base_url}}"],
+              "path": ["progress", "courses", "1", "summary"]
+            },
+            "description": "Get comprehensive progress summary for a course including all clips, completion status, and points earned."
+          },
+          "response": []
+        }
+      ],
+      "description": "Clip progress tracking endpoints for monitoring user progress through course content."
+    },
+    {
+      "name": "Complete Workflow Example",
+      "item": [
+        {
+          "name": "1. Enroll in Course",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('enrollment_id', response.data.enrollment.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/enrollments/courses/1",
+              "host": ["{{base_url}}"],
+              "path": ["enrollments", "courses", "1"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2. Start First Clip",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"progressPercent\": 0,\n  \"isCompleted\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/progress/clips/1",
+              "host": ["{{base_url}}"],
+              "path": ["progress", "clips", "1"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3. Update Clip Progress (50%)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"progressPercent\": 50\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/progress/clips/1",
+              "host": ["{{base_url}}"],
+              "path": ["progress", "clips", "1"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4. Complete First Clip",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"progressPercent\": 100,\n  \"isCompleted\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/progress/clips/1",
+              "host": ["{{base_url}}"],
+              "path": ["progress", "clips", "1"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5. Get Course Progress Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/progress/courses/1/summary",
+              "host": ["{{base_url}}"],
+              "path": ["progress", "courses", "1", "summary"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "6. Update Enrollment Progress",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"progressPercent\": 25,\n  \"pointsEarned\": 50\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/enrollments/{{enrollment_id}}/progress",
+              "host": ["{{base_url}}"],
+              "path": ["enrollments", "{{enrollment_id}}", "progress"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "7. Get My Enrollments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/enrollments/my",
+              "host": ["{{base_url}}"],
+              "path": ["enrollments", "my"]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Complete workflow demonstrating typical user journey: enroll → watch clips → track progress → complete course."
+    }
+  ]
+}
